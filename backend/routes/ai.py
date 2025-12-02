@@ -1,6 +1,7 @@
 """
 AI Insights API Routes
 """
+from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from models.schemas import ForecastRequest, AIInsightsResponse, AIScenario
 from services.ai_service import analyze_strategy
@@ -16,7 +17,8 @@ async def get_ai_insights(request: ForecastRequest):
     """
     try:
         # Get historical data for context
-        historical_data = load_historical_data()
+        data_dir = Path(__file__).parent.parent / "data"
+        historical_data = load_historical_data(data_dir)
 
         # Get AI analysis
         ai_result = analyze_strategy(
