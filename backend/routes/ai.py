@@ -4,7 +4,7 @@ AI Insights API Routes
 from fastapi import APIRouter, HTTPException
 from models.schemas import ForecastRequest, AIInsightsResponse, AIScenario
 from services.ai_service import analyze_strategy
-from services.forecast_service import get_historical_data
+from services.forecast_service import load_historical_data
 
 router = APIRouter(prefix="/api", tags=["AI Insights"])
 
@@ -16,7 +16,7 @@ async def get_ai_insights(request: ForecastRequest):
     """
     try:
         # Get historical data for context
-        historical_data = get_historical_data()
+        historical_data = load_historical_data()
 
         # Get AI analysis
         ai_result = analyze_strategy(
