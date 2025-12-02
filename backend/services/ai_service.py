@@ -3,11 +3,19 @@ AI Strategy Analysis Service
 Uses OpenAI to analyze growth strategies and provide recommendations
 """
 import os
-from typing import Dict, List, Any
-from openai import OpenAI
+from typing import Dict, List, Any, Optional
 
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Initialize OpenAI client only if API key is available
+client: Optional[object] = None
+try:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if api_key:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+    else:
+        print("Warning: OPENAI_API_KEY not set. AI features will use fallback recommendations.")
+except Exception as e:
+    print(f"Warning: Could not initialize OpenAI client: {e}. Using fallback recommendations.")
 
 def analyze_strategy(
     current_followers: Dict[str, int],
@@ -97,6 +105,16 @@ Return ONLY valid JSON in this exact format:
     ]
 }
 """
+
+    # Use fallback if OpenAI client is not available
+    if client is None:
+        print("Using fallback recommendations (OpenAI client not initialized)")
+        return generate_fallback_recommendations(
+            current_followers,
+            posts_per_week,
+            platform_allocation,
+            preset
+        )
 
     try:
         response = client.chat.completions.create(
