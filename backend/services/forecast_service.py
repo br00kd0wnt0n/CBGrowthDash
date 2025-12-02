@@ -242,6 +242,11 @@ def load_historical_data(data_dir: Path):
 
     eng_index = compute_engagement_index(mentions_df, sentiment_df)
 
+    # Convert timestamps to ISO format strings for JSON serialization
+    for df in [mentions_df, sentiment_df, tags_df]:
+        if 'Time' in df.columns:
+            df['Time'] = df['Time'].astype(str)
+
     return {
         "mentions": mentions_df.to_dict('records'),
         "sentiment": sentiment_df.to_dict('records'),
