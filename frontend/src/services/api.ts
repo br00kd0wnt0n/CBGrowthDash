@@ -41,9 +41,29 @@ export interface HistoricalDataResponse {
   engagement_index: number[];
 }
 
+export interface AIScenario {
+  name: string;
+  posts_per_week: number;
+  platform_allocation: Record<string, number>;
+  reasoning: string;
+  risk_level: 'LOW' | 'MEDIUM' | 'HIGH';
+  expected_outcome: string;
+}
+
+export interface AIInsightsResponse {
+  analysis: string;
+  scenarios: AIScenario[];
+  key_insights: string[];
+}
+
 export const api = {
   getHistoricalData: () => request<HistoricalDataResponse>('/api/historical'),
   runForecast: (data: ForecastRequest) => request<ForecastResponse>('/api/forecast', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }),
+  getAIInsights: (data: ForecastRequest) => request<AIInsightsResponse>('/api/ai-insights', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),

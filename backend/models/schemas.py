@@ -54,3 +54,20 @@ class StatusResponse(BaseModel):
     """API status response"""
     status: str
     version: str
+
+
+class AIScenario(BaseModel):
+    """AI-generated strategy scenario"""
+    name: str = Field(description="Scenario name: Optimized, Aggressive, or Conservative")
+    posts_per_week: int = Field(ge=14, le=50)
+    platform_allocation: Dict[str, int] = Field(description="Platform allocation percentages")
+    reasoning: str = Field(description="Brief explanation of strategy")
+    risk_level: str = Field(description="Risk level: LOW, MEDIUM, or HIGH")
+    expected_outcome: str = Field(description="Expected result vs goal")
+
+
+class AIInsightsResponse(BaseModel):
+    """AI strategy analysis and recommendations"""
+    analysis: str = Field(description="Overall assessment of current strategy")
+    scenarios: List[AIScenario] = Field(description="3 alternative scenarios")
+    key_insights: List[str] = Field(description="Key insights and recommendations")
