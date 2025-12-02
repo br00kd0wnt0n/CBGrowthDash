@@ -86,10 +86,6 @@ export function Dashboard() {
     setPlatformAllocation(prev => ({ ...prev, [platform]: value }))
   }
 
-  const updateFollowers = (platform: string, value: number) => {
-    setCurrentFollowers(prev => ({ ...prev, [platform]: value }))
-  }
-
   // Chart data
   const forecastChart = forecastResults?.monthly_data.map(item => ({
     month: `M${item.month}`,
