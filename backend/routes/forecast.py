@@ -2,13 +2,13 @@ from fastapi import APIRouter, HTTPException
 from pathlib import Path
 import pandas as pd
 
-from backend.models.schemas import (
+from models.schemas import (
     ForecastRequest,
     ForecastResponse,
     MonthlyForecast,
     HistoricalDataResponse
 )
-from backend.services.forecast_service import (
+from services.forecast_service import (
     forecast_growth,
     load_historical_data,
     compute_engagement_index,

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.routes import forecast
-from backend.models.schemas import StatusResponse
+from routes import forecast
+from models.schemas import StatusResponse
 
 app = FastAPI(
     title="Care Bears Growth Planner API",
