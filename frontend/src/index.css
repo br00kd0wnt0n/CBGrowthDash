@@ -10,25 +10,46 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #0f172a;
-  color: #e2e8f0;
+  background: linear-gradient(135deg, #fef5f7 0%, #fff9f0 100%);
+  color: #2d3748;
+  min-height: 100vh;
 }
 
 #root {
   min-height: 100vh;
 }
 
-/* Pulse-inspired dark theme colors */
+/* Care Bears vibrant color scheme */
 :root {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --accent: #6366f1;
-  --accent-hover: #818cf8;
-  --border: #334155;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --error: #ef4444;
+  /* Brand colors */
+  --bittersweet: #ff6e61;
+  --texas-rose: #ffb84d;
+  --fountain-blue: #4eb7ac;
+  --mustard: #ffd54d;
+  --froly: #f06090;
+
+  /* Semantic colors */
+  --primary: #4eb7ac;
+  --secondary: #ff6e61;
+  --accent: #f06090;
+  --warning: #ffb84d;
+  --success: #4eb7ac;
+
+  /* Background colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #fef5f7;
+  --bg-tertiary: #fff9f0;
+  --bg-gradient: linear-gradient(135deg, #fef5f7 0%, #fff9f0 100%);
+
+  /* Text colors */
+  --text-primary: #2d3748;
+  --text-secondary: #718096;
+  --text-white: #ffffff;
+
+  /* Border and shadows */
+  --border: #e2e8f0;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+  --shadow-colored: 0 8px 24px rgba(78, 183, 172, 0.15);
 }
