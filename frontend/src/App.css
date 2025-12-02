@@ -1,6 +1,55 @@
 .app {
   min-height: 100vh;
-  padding: 2rem;
+  padding: 0;
+}
+
+/* Compact Header */
+.header-compact {
+  background: var(--bg-primary);
+  border-bottom: 2px solid var(--border);
+  padding: 1rem 2rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-left,
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-title {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.header-title h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--fountain-blue), var(--froly));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+.period {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.logo-small {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
 }
 
 .header {

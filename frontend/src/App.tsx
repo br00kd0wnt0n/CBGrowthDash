@@ -14,24 +14,24 @@ function App() {
 
   return (
     <div className="app">
-      <header className="header">
-        <div className="header-content">
-          <h1>Care Bears Growth Dashboard</h1>
-          <p className="subtitle">Social Media Growth Forecasting & Analytics</p>
+      <header className="header-compact">
+        <div className="header-left">
+          <img src="/CB_logo_FINAL_FullColor.png" alt="Care Bears" className="logo-small" />
+          <div className="header-title">
+            <h1>Care Bears Growth Dashboard</h1>
+            <span className="period">Q4 2024</span>
+          </div>
         </div>
-        <div className="header-logos">
-          <img src="/CB_logo_FINAL_FullColor.png" alt="Care Bears" className="logo" />
-          <img src="/logo.png" alt="Ralph" className="logo" />
-        </div>
-        <div className={`status-badge ${status.online ? 'online' : 'offline'}`} style={{marginLeft: 'auto'}}>
-          <div className="status-indicator" />
-          <span>API {status.online ? 'Connected' : 'Offline'} {status.text}</span>
+        <div className="header-right">
+          <img src="/logo.png" alt="Ralph" className="logo-small" />
+          <div className={`status-badge ${status.online ? 'online' : 'offline'}`}>
+            <div className="status-indicator" />
+            <span>{status.online ? 'Connected' : 'Offline'}</span>
+          </div>
         </div>
       </header>
 
-      <main className="main">
-        <Dashboard />
-      </main>
+      <Dashboard />
     </div>
   )
 }
