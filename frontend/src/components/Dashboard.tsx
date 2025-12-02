@@ -3,10 +3,10 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { api, type HistoricalDataResponse, type ForecastRequest, type ForecastResponse, type AIInsightsResponse, type AIScenario } from '../services/api'
 import './Dashboard.css'
 
-// Number formatting utility
-function formatNumber(num: number): string {
-  return num.toLocaleString('en-US')
-}
+// Number formatting utility (currently unused but available for future use)
+// function formatNumber(num: number): string {
+//   return num.toLocaleString('en-US')
+// }
 
 // Tooltip component
 function HelpTooltip({ text }: { text: string }) {
@@ -330,20 +330,24 @@ export function Dashboard() {
                 </button>
                 {expandedContentMix === platform && (
                   <div className="content-mix-controls">
-                    {Object.keys(contentMix[platform as keyof typeof contentMix]).map(contentType => (
-                      <div key={contentType} className="content-mix-item">
-                        <label>{contentType}</label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={contentMix[platform as keyof typeof contentMix][contentType]}
-                          onChange={e => updateContentMix(platform, contentType, parseInt(e.target.value))}
-                          className="slider content-slider"
-                        />
-                        <span className="content-value">{contentMix[platform as keyof typeof contentMix][contentType]}%</span>
-                      </div>
-                    ))}
+                    {Object.keys(contentMix[platform as keyof typeof contentMix]).map(contentType => {
+                      const platformMix = contentMix[platform as keyof typeof contentMix]
+                      const value = platformMix[contentType as keyof typeof platformMix]
+                      return (
+                        <div key={contentType} className="content-mix-item">
+                          <label>{contentType}</label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={value}
+                            onChange={e => updateContentMix(platform, contentType, parseInt(e.target.value))}
+                            className="slider content-slider"
+                          />
+                          <span className="content-value">{value}%</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>
