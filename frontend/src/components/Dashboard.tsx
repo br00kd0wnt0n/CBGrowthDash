@@ -59,6 +59,7 @@ export function Dashboard() {
   const [aiInsights, setAiInsights] = useState<AIInsightsResponse | null>(null)
   const [scenarios, setScenarios] = useState<ScenarioWithForecast[]>([])
   const [expandedContentMix, setExpandedContentMix] = useState<string | null>(null)
+  const [historicalTab, setHistoricalTab] = useState<'mentions' | 'sentiment' | 'tags'>('mentions')
 
   const totalFollowers = Object.values(currentFollowers).reduce((a, b) => a + b, 0)
   const goalFollowers = totalFollowers * 2 // Double in 12 months
@@ -527,36 +528,79 @@ export function Dashboard() {
             <div className="historical-section">
               <h3 className="section-header">
                 Historical Context
-                <HelpTooltip text="Past performance data showing average engagement and sentiment metrics" />
+                <HelpTooltip text="Past performance data showing engagement trends, sentiment analysis, and popular tags over time" />
               </h3>
-              <div className="historical-grid">
-                <div className="historical-card">
-                  <div className="historical-label">Avg Weekly Mentions</div>
-                  <div className="historical-value">
-                    {(historicalData.mentions.reduce((sum, item) => sum + item.Mentions, 0) / historicalData.mentions.length).toFixed(0)}
-                  </div>
-                </div>
-                <div className="historical-card">
-                  <div className="historical-label">Engagement Index</div>
-                  <div className="historical-value">
-                    {(historicalData.engagement_index.reduce((a, b) => a + b, 0) / historicalData.engagement_index.length * 100).toFixed(1)}%
-                  </div>
-                </div>
-                <div className="historical-card">
-                  <div className="historical-label">Sentiment</div>
-                  <div className="historical-value">
-                    {(() => {
-                      if (historicalData.sentiment.length === 0) return 'N/A'
-                      const latest = historicalData.sentiment[historicalData.sentiment.length - 1]
-                      const positive = latest.Positive || 0
-                      const neutral = latest.Neutral || 0
-                      const negative = latest.Negative || 0
-                      const total = positive + neutral + negative
-                      if (total === 0) return 'N/A'
-                      return ((positive / total) * 100).toFixed(0) + '% Positive'
-                    })()}
-                  </div>
-                </div>
+
+              <div className="historical-tabs">
+                <button
+                  className={`historical-tab ${historicalTab === 'mentions' ? 'active' : ''}`}
+                  onClick={() => setHistoricalTab('mentions')}
+                >
+                  Mentions
+                </button>
+                <button
+                  className={`historical-tab ${historicalTab === 'sentiment' ? 'active' : ''}`}
+                  onClick={() => setHistoricalTab('sentiment')}
+                >
+                  Sentiment
+                </button>
+                <button
+                  className={`historical-tab ${historicalTab === 'tags' ? 'active' : ''}`}
+                  onClick={() => setHistoricalTab('tags')}
+                >
+                  Tags
+                </button>
+              </div>
+
+              <div className="historical-chart-container">
+                {historicalTab === 'mentions' && (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={historicalData.mentions}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="Time" stroke="var(--text-secondary)" />
+                      <YAxis stroke="var(--text-secondary)" />
+                      <Tooltip
+                        contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
+                      />
+                      <Legend />
+                      <Line type="monotone" dataKey="Mentions" stroke="var(--fountain-blue)" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+
+                {historicalTab === 'sentiment' && (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={historicalData.sentiment}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="Time" stroke="var(--text-secondary)" />
+                      <YAxis stroke="var(--text-secondary)" />
+                      <Tooltip
+                        contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
+                      />
+                      <Legend />
+                      <Line type="monotone" dataKey="Positive" stroke="#4ade80" strokeWidth={2} />
+                      <Line type="monotone" dataKey="Neutral" stroke="#94a3b8" strokeWidth={2} />
+                      <Line type="monotone" dataKey="Negative" stroke="#ef4444" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+
+                {historicalTab === 'tags' && (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={historicalData.tags}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="Time" stroke="var(--text-secondary)" />
+                      <YAxis stroke="var(--text-secondary)" />
+                      <Tooltip
+                        contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
+                      />
+                      <Legend />
+                      <Line type="monotone" dataKey="CareBears" stroke="var(--fountain-blue)" strokeWidth={2} />
+                      <Line type="monotone" dataKey="Tenderheart" stroke="var(--bittersweet)" strokeWidth={2} />
+                      <Line type="monotone" dataKey="Cheer" stroke="var(--texas-rose)" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
           )}

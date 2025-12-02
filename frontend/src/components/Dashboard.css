@@ -395,6 +395,43 @@
   color: var(--fountain-blue);
 }
 
+/* Historical Tabs */
+.historical-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  border-bottom: 2px solid var(--border);
+}
+
+.historical-tab {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s ease;
+}
+
+.historical-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+.historical-tab.active {
+  color: var(--fountain-blue);
+  border-bottom-color: var(--fountain-blue);
+}
+
+.historical-chart-container {
+  margin-top: 1.5rem;
+  background: var(--bg-primary);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
 /* Tooltip */
 .tooltip-container {
   position: relative;
