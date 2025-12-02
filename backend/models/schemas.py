@@ -47,7 +47,7 @@ class HistoricalDataResponse(BaseModel):
     mentions: List[Dict]
     sentiment: List[Dict]
     tags: List[Dict]
-    engagement_index: List[Dict]
+    engagement_index: List[float]
 
 
 class StatusResponse(BaseModel):
