@@ -19,7 +19,7 @@ function App() {
           <img src="/CB_logo_FINAL_FullColor.png" alt="Care Bears" className="logo-small" />
           <div className="header-title">
             <h1>Growth Forecast Dashboard</h1>
-            <span className="period">Q4 2024</span>
+            <span className="period">DEC 2025</span>
           </div>
         </div>
         <div className="header-right">
