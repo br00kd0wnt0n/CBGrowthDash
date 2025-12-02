@@ -4,10 +4,10 @@ Uses OpenAI to analyze growth strategies and provide recommendations
 """
 import os
 from typing import Dict, List, Any
-import openai
+from openai import OpenAI
 
 # Initialize OpenAI client
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def analyze_strategy(
     current_followers: Dict[str, int],
@@ -99,7 +99,7 @@ Return ONLY valid JSON in this exact format:
 """
 
     try:
-        response = openai.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-4-turbo-preview",
             messages=[
                 {"role": "system", "content": "You are an expert social media growth strategist. Provide data-driven, actionable recommendations. Always return valid JSON."},
@@ -116,7 +116,9 @@ Return ONLY valid JSON in this exact format:
 
     except Exception as e:
         # Fallback if OpenAI fails
+        import traceback
         print(f"AI Service Error: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
         return generate_fallback_recommendations(
             current_followers,
             posts_per_week,

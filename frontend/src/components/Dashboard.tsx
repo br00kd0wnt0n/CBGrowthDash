@@ -182,11 +182,15 @@ export function Dashboard() {
     setCurrentFollowers(prev => ({ ...prev, [platform]: numValue }))
   }
 
-  // Chart data - combine manual + visible scenarios
+  // Chart data - combine manual + visible scenarios + individual platforms
   const chartData = forecastResults?.monthly_data.map((item, idx) => {
     const dataPoint: any = {
       month: `M${item.month}`,
-      Manual: Math.round(item.total)
+      Total: Math.round(item.total),
+      Instagram: Math.round(item.Instagram),
+      TikTok: Math.round(item.TikTok),
+      YouTube: Math.round(item.YouTube),
+      Facebook: Math.round(item.Facebook)
     }
 
     // Add visible scenario lines
@@ -264,7 +268,10 @@ export function Dashboard() {
             </div>
 
             <div className="control-group">
-              <label>Strategy Preset</label>
+              <label>
+                Strategy Preset
+                <HelpTooltip text="Conservative: Safe approach with lower growth (60% acquisition rate, no campaign boost). Balanced: Standard growth with moderate risk (100% acquisition, 15% campaign lift). Ambitious: Aggressive growth strategy (150% acquisition, 35% campaign lift, higher engagement sensitivity)." />
+              </label>
               <select value={preset} onChange={e => setPreset(e.target.value)} className="preset-select">
                 <option>Conservative</option>
                 <option>Balanced</option>
@@ -431,7 +438,11 @@ export function Dashboard() {
                   strokeDasharray="5 5"
                   label={{ value: 'Goal', position: 'right', fill: 'var(--fountain-blue)' }}
                 />
-                <Line type="monotone" dataKey="Manual" stroke="var(--text-primary)" strokeWidth={4} dot={false} />
+                <Line type="monotone" dataKey="Total" stroke="var(--text-primary)" strokeWidth={4} dot={false} name="Total (Manual)" />
+                <Line type="monotone" dataKey="Instagram" stroke="#E1306C" strokeWidth={2} dot={false} strokeDasharray="3 3" />
+                <Line type="monotone" dataKey="TikTok" stroke="#000000" strokeWidth={2} dot={false} strokeDasharray="3 3" />
+                <Line type="monotone" dataKey="YouTube" stroke="#FF0000" strokeWidth={2} dot={false} strokeDasharray="3 3" />
+                <Line type="monotone" dataKey="Facebook" stroke="#1877F2" strokeWidth={2} dot={false} strokeDasharray="3 3" />
                 {scenarios.map((scenario, idx) =>
                   scenario.visible && (
                     <Line
