@@ -595,9 +595,9 @@ export function Dashboard() {
                         contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
                       />
                       <Legend />
-                      <Line type="monotone" dataKey="CareBears" stroke="var(--fountain-blue)" strokeWidth={2} />
-                      <Line type="monotone" dataKey="Tenderheart" stroke="var(--bittersweet)" strokeWidth={2} />
-                      <Line type="monotone" dataKey="Cheer" stroke="var(--texas-rose)" strokeWidth={2} />
+                      <Line type="monotone" dataKey="Official Care Bears" stroke="var(--fountain-blue)" strokeWidth={2} name="Official Care Bears" />
+                      <Line type="monotone" dataKey="Stranger Things" stroke="var(--bittersweet)" strokeWidth={2} name="Stranger Things" />
+                      <Line type="monotone" dataKey="Wicked" stroke="var(--texas-rose)" strokeWidth={2} name="Wicked" />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
