@@ -141,7 +141,7 @@ export function Dashboard() {
             platform_allocation: scenario.platform_allocation,
             content_mix_by_platform: contentMix,
             months,
-            preset: scenario.name
+            preset: preset  // Use the original user-selected preset
           }
           const forecast = await api.runForecast(scenarioRequest)
           scenario.forecast = forecast
