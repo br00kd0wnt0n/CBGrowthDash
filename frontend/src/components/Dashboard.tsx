@@ -168,6 +168,27 @@ export function Dashboard() {
           </div>
 
           <div className="panel-section">
+            <h3 className="section-header">Current Followers</h3>
+            {Object.keys(currentFollowers).map(platform => (
+              <div key={platform} className="platform-control">
+                <div className="platform-header">
+                  <span className="platform-name">{platform}</span>
+                  <span className="platform-percent">{(currentFollowers[platform as keyof typeof currentFollowers] / 1000).toFixed(0)}K</span>
+                </div>
+                <input
+                  type="range"
+                  min="100000"
+                  max="1000000"
+                  step="10000"
+                  value={currentFollowers[platform as keyof typeof currentFollowers]}
+                  onChange={e => setCurrentFollowers({...currentFollowers, [platform]: parseInt(e.target.value)})}
+                  className="slider platform-slider"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="panel-section">
             <h3 className="section-header">Platform Allocation</h3>
             {Object.keys(platformAllocation).map(platform => (
               <div key={platform} className="platform-control">
