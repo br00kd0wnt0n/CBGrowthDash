@@ -862,24 +862,33 @@ def main():
 
     st.dataframe(monthly.style.format({**{p: '{:,.0f}' for p in PLATFORMS}, 'Total': '{:,.0f}', 'Added': '{:,.0f}'}), use_container_width=True)
 
-    # AI Insights — generate on first load and allow manual regenerate
+    # AI Insights — generate on first load (always) and allow manual regenerate
     st.subheader("AI Insights")
     regen = st.button("Regenerate insights", help="Recompute insights based on current plan and data")
-    if regen or 'insights_text' not in st.session_state:
-        st.session_state['insights_text'] = generate_ai_insights(
-            monthly=monthly,
-            cur_followers=cur_followers,
-            platform_alloc=platform_alloc,
-            content_mix_by_platform=content_mix_by_platform,
-            posts_per_week_total=total_posts_week,
-            eng_df=eng_df,
-            tags_df=tags_df,
-        )
+    need_autogen = not st.session_state.get('ai_insights_initialized', False) or 'insights_text' not in st.session_state
+    if regen or need_autogen:
+        try:
+            text = generate_ai_insights(
+                monthly=monthly,
+                cur_followers=cur_followers,
+                platform_alloc=platform_alloc,
+                content_mix_by_platform=content_mix_by_platform,
+                posts_per_week_total=total_posts_week,
+                eng_df=eng_df,
+                tags_df=tags_df,
+            )
+            st.session_state['insights_text'] = text
+        except Exception as e:
+            st.session_state['insights_text'] = f"Insights unavailable due to an internal error: {e}"
         st.session_state['insights_updated'] = pd.Timestamp.utcnow()
-    st.write(st.session_state.get('insights_text', ''))
+        st.session_state['ai_insights_initialized'] = True
+    st.markdown(st.session_state.get('insights_text', ''))
     ts = st.session_state.get('insights_updated')
     if ts is not None:
-        st.caption(f"Last updated: {ts.tz_localize('UTC').tz_convert('US/Pacific').strftime('%Y-%m-%d %H:%M %Z')}")
+        try:
+            st.caption(f"Last updated: {ts.tz_localize('UTC').tz_convert('US/Pacific').strftime('%Y-%m-%d %H:%M %Z')}")
+        except Exception:
+            st.caption(f"Last updated: {ts}")
 
     # Export
     csv = monthly.to_csv(index=False).encode('utf-8')
