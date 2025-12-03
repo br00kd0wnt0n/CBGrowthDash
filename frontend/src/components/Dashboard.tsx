@@ -660,7 +660,10 @@ export function Dashboard() {
               <div className="metric-subtitle">100% increase</div>
             </div>
             <div className="metric-card">
-              <div className="metric-label">Est. ROI</div>
+              <div className="metric-label" style={{display:'flex', alignItems:'center', gap:'6px'}}>
+                Est. ROI
+                <HelpTooltip text={"ROI = (Added Followers × Value per New Follower − Spend) / Spend. Set Value per New Follower in Step 6 (Growth Strategy & Metrics)."} />
+              </div>
               <div className="metric-value">{estROI !== null ? `${estROI.toFixed(0)}%` : '—'}</div>
               <div className="metric-subtitle">CPF {blendedCPF > 0 ? `$${blendedCPF.toFixed(2)}` : '—'} | Spend ${(totalSpend/1000).toFixed(1)}k</div>
             </div>
