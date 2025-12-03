@@ -380,7 +380,7 @@ export function Dashboard() {
         <div className="control-panel">
           <div className="panel-section">
             <h3 className="section-header">
-              Strategy Controls
+              <span className="step-badge">1</span> Strategy Controls
               <HelpTooltip text="Adjust posting frequency, timeline, and strategy approach to test different growth scenarios" />
             </h3>
 
@@ -426,7 +426,7 @@ export function Dashboard() {
           {/* Repositioned: Paid Media and Budget panels after Content Mix */}
           <div className="panel-section">
             <h3 className="section-header">
-              Paid Media
+              <span className="step-badge">5</span> Paid Media
               <HelpTooltip text="Optional: Include paid impressions per week and how they are allocated by platform. Uses industry conversion defaults (imp → views → engagements → follows)." />
             </h3>
             <div className="control-group" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
@@ -473,7 +473,7 @@ export function Dashboard() {
 
           <div className="panel-section">
             <h3 className="section-header">
-              Growth Strategy & Metrics
+              <span className="step-badge">6</span> Growth Strategy & Metrics
               <HelpTooltip text="Budget-based predictive modeling using cost-per-follower (CPF) ranges. Defaults to $3–$5 across paid, creator, acquisition." />
             </h3>
             <div className="control-group" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
@@ -496,10 +496,10 @@ export function Dashboard() {
                 </div>
                 <div className="control-group">
                   <label>Cost per Follower (range)</label>
-                  <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'8px'}}>
-                    <input type="number" step={0.1} value={cpfMin} onChange={e=>setCpfMin(parseFloat(e.target.value)||0)} className="follower-input" placeholder="Min ($)" />
-                    <input type="number" step={0.1} value={cpfMid} onChange={e=>setCpfMid(parseFloat(e.target.value)||0)} className="follower-input" placeholder="Mid ($)" />
-                    <input type="number" step={0.1} value={cpfMax} onChange={e=>setCpfMax(parseFloat(e.target.value)||0)} className="follower-input" placeholder="Max ($)" />
+                  <div className="cpf-grid">
+                    <input type="number" step={0.1} value={cpfMin} onChange={e=>setCpfMin(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Min ($)" />
+                    <input type="number" step={0.1} value={cpfMid} onChange={e=>setCpfMid(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Mid ($)" />
+                    <input type="number" step={0.1} value={cpfMax} onChange={e=>setCpfMax(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Max ($)" />
                   </div>
                   <div className="ai-note">Use ranges to frame outcomes rather than a single point prediction.</div>
                 </div>
@@ -512,7 +512,7 @@ export function Dashboard() {
 
           <div className="panel-section">
             <h3 className="section-header">
-              Current Followers
+              <span className="step-badge">2</span> Current Followers
               <HelpTooltip text="Enter the current follower count for each platform. These are your starting numbers for the forecast." />
             </h3>
             {Object.keys(currentFollowers).map(platform => (
@@ -530,7 +530,7 @@ export function Dashboard() {
 
           <div className="panel-section">
             <h3 className="section-header">
-              Platform Allocation
+              <span className="step-badge">3</span> Platform Allocation
               <HelpTooltip text="Set what percentage of your total weekly posts go to each platform. Must total 100%." />
             </h3>
             {Object.keys(platformAllocation).map(platform => (
@@ -553,7 +553,7 @@ export function Dashboard() {
 
           <div className="panel-section">
             <h3 className="section-header">
-              Content Mix
+              <span className="step-badge">4</span> Content Mix
               <HelpTooltip text="Define the content type distribution for each platform. Click platform names to expand." />
             </h3>
             {Object.keys(contentMix).map(platform => (
@@ -593,7 +593,7 @@ export function Dashboard() {
 
           <div className="panel-section ai-section">
             <h3 className="section-header">
-              <span>🤖 AI Insights</span>
+              <span className="step-badge">7</span> <span>🤖 AI Insights</span>
               <HelpTooltip text="Get AI-powered recommendations for 3 alternative strategies: Optimized, Aggressive, and Conservative" />
             </h3>
             <button
