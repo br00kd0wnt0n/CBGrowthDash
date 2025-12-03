@@ -64,6 +64,9 @@ PAID_FUNNEL_DEFAULT = {
     "Facebook":  {"vtr": 0.28, "er": 0.015, "fcr": 0.008},
 }
 
+# Cost-per-follower default ranges (USD)
+CPF_DEFAULT = {"min": 3.0, "mid": 4.0, "max": 5.0}
+
 
 def saturating_effect(freq_per_week: float, half_sat: float) -> float:
     if half_sat <= 0:
@@ -152,6 +155,13 @@ def forecast_growth(
     paid_impressions_per_week_total: float = 0.0,
     paid_allocation: Dict[str, float] | None = None,
     paid_funnel: Dict[str, Dict[str, float]] | None = None,
+    # budget-based parameters
+    paid_budget_per_week_total: float = 0.0,
+    creator_budget_per_week_total: float = 0.0,
+    acquisition_budget_per_week_total: float = 0.0,
+    cpf_paid: Dict[str, float] | None = None,
+    cpf_creator: Dict[str, float] | None = None,
+    cpf_acquisition: Dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """Run growth forecast simulation"""
     weeks = months * 4 + 4
@@ -176,6 +186,11 @@ def forecast_growth(
         total_paid_alloc = sum(paid_alloc_frac.values()) or 1.0
         paid_alloc_frac = {p: v/total_paid_alloc for p, v in paid_alloc_frac.items()}
     paid_funnel = paid_funnel or PAID_FUNNEL_DEFAULT
+
+    # CPF configs
+    cpf_paid = cpf_paid or CPF_DEFAULT
+    cpf_creator = cpf_creator or CPF_DEFAULT
+    cpf_acquisition = cpf_acquisition or CPF_DEFAULT
 
     # Normalize content mixes
     content_mix_norm = {}
@@ -221,7 +236,18 @@ def forecast_growth(
             # modestly scale by content suitability
             paid_follows *= (0.8 + 0.2 * content_mult)
 
-            add = mult_add + add_posts + paid_follows
+            # Budget-driven direct CPF followers (mid case); allocate by platform
+            paid_budget_follows = 0.0
+            creator_budget_follows = 0.0
+            acq_budget_follows = 0.0
+            if paid_budget_per_week_total > 0 and cpf_paid.get("mid", 4.0) > 0:
+                paid_budget_follows = (paid_budget_per_week_total * paid_alloc_frac[p]) / cpf_paid.get("mid", 4.0)
+            if creator_budget_per_week_total > 0 and cpf_creator.get("mid", 4.0) > 0:
+                creator_budget_follows = (creator_budget_per_week_total * alloc_frac[p]) / cpf_creator.get("mid", 4.0)
+            if acquisition_budget_per_week_total > 0 and cpf_acquisition.get("mid", 4.0) > 0:
+                acq_budget_follows = (acquisition_budget_per_week_total * alloc_frac[p]) / cpf_acquisition.get("mid", 4.0)
+
+            add = mult_add + add_posts + paid_follows + paid_budget_follows + creator_budget_follows + acq_budget_follows
             followers[p] += add
             week_snapshot[p] = followers[p]
 

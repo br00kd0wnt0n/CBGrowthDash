@@ -35,6 +35,31 @@ class ForecastRequest(BaseModel):
         default=None,
         description="Optional per-platform paid funnel rates: {platform: {vtr, er, fcr}} where vtr=view-through rate (views/impressions), er=engagement rate (engagements/views), fcr=follow conversion rate (follows/engagement)."
     )
+    # Optional budget-based acquisition (direct CPF modeling)
+    paid_budget_per_week_total: Optional[float] = Field(
+        default=0.0, ge=0,
+        description="Weekly paid boosting budget in USD (direct follower acquisition via CPF)."
+    )
+    creator_budget_per_week_total: Optional[float] = Field(
+        default=0.0, ge=0,
+        description="Weekly creator/collab budget in USD (modeled via CPF)."
+    )
+    acquisition_budget_per_week_total: Optional[float] = Field(
+        default=0.0, ge=0,
+        description="Weekly acquisition budget in USD (giveaways, promo)."
+    )
+    cpf_paid: Optional[Dict[str, float]] = Field(
+        default=None,
+        description="Paid boosting CPF range: {min, mid, max}. Defaults to {3,4,5}."
+    )
+    cpf_creator: Optional[Dict[str, float]] = Field(
+        default=None,
+        description="Creator CPF range: {min, mid, max}. Defaults to {3,4,5}."
+    )
+    cpf_acquisition: Optional[Dict[str, float]] = Field(
+        default=None,
+        description="Acquisition CPF range: {min, mid, max}. Defaults to {3,4,5}."
+    )
 
 
 class MonthlyForecast(BaseModel):

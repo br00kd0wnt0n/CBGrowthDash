@@ -63,6 +63,14 @@ export function Dashboard() {
     YouTube: 15,
     Facebook: 15
   })
+  // Budget & CPF state
+  const [enableBudget, setEnableBudget] = useState(false)
+  const [paidBudgetWeek, setPaidBudgetWeek] = useState(0)
+  const [creatorBudgetWeek, setCreatorBudgetWeek] = useState(0)
+  const [acquisitionBudgetWeek, setAcquisitionBudgetWeek] = useState(0)
+  const [cpfMin, setCpfMin] = useState(3)
+  const [cpfMid, setCpfMid] = useState(4)
+  const [cpfMax, setCpfMax] = useState(5)
 
   // AI Insights state
   const [aiInsights, setAiInsights] = useState<AIInsightsResponse | null>(null)
@@ -120,6 +128,14 @@ export function Dashboard() {
         ...(enablePaid ? {
           paid_impressions_per_week_total: paidImpressionsWeek,
           paid_allocation: paidAllocation,
+        } : {}),
+        ...(enableBudget ? {
+          paid_budget_per_week_total: paidBudgetWeek,
+          creator_budget_per_week_total: creatorBudgetWeek,
+          acquisition_budget_per_week_total: acquisitionBudgetWeek,
+          cpf_paid: { min: cpfMin, mid: cpfMid, max: cpfMax },
+          cpf_creator: { min: cpfMin, mid: cpfMid, max: cpfMax },
+          cpf_acquisition: { min: cpfMin, mid: cpfMid, max: cpfMax },
         } : {})
       }
 
@@ -167,6 +183,14 @@ export function Dashboard() {
             ...(enablePaid ? {
               paid_impressions_per_week_total: paidImpressionsWeek,
               paid_allocation: paidAllocation,
+            } : {}),
+            ...(enableBudget ? {
+              paid_budget_per_week_total: paidBudgetWeek,
+              creator_budget_per_week_total: creatorBudgetWeek,
+              acquisition_budget_per_week_total: acquisitionBudgetWeek,
+              cpf_paid: { min: cpfMin, mid: cpfMid, max: cpfMax },
+              cpf_creator: { min: cpfMin, mid: cpfMid, max: cpfMax },
+              cpf_acquisition: { min: cpfMin, mid: cpfMid, max: cpfMax },
             } : {})
           }
           const forecast = await api.runForecast(scenarioRequest)
@@ -351,6 +375,42 @@ export function Dashboard() {
                     </div>
                   ))}
                   <div className="ai-note">Tip: Defaults mirror your organic platform allocation.</div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="panel-section">
+            <h3 className="section-header">
+              Growth Strategy & Metrics
+              <HelpTooltip text="Budget-based predictive modeling using cost-per-follower (CPF) ranges. Defaults to $3–$5 across paid, creator, acquisition." />
+            </h3>
+            <div className="control-group" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+              <label>Enable Budget Model</label>
+              <input type="checkbox" checked={enableBudget} onChange={e=>setEnableBudget(e.target.checked)} />
+            </div>
+            {enableBudget && (
+              <>
+                <div className="control-group">
+                  <label>Paid Boosting Budget / Week (USD)</label>
+                  <input type="number" min={0} step={100} value={paidBudgetWeek} onChange={e=>setPaidBudgetWeek(parseInt(e.target.value)||0)} className="follower-input" />
+                </div>
+                <div className="control-group">
+                  <label>Creator Budget / Week (USD)</label>
+                  <input type="number" min={0} step={100} value={creatorBudgetWeek} onChange={e=>setCreatorBudgetWeek(parseInt(e.target.value)||0)} className="follower-input" />
+                </div>
+                <div className="control-group">
+                  <label>Acquisition Budget / Week (USD)</label>
+                  <input type="number" min={0} step={100} value={acquisitionBudgetWeek} onChange={e=>setAcquisitionBudgetWeek(parseInt(e.target.value)||0)} className="follower-input" />
+                </div>
+                <div className="control-group">
+                  <label>Cost per Follower (range)</label>
+                  <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'8px'}}>
+                    <input type="number" step={0.1} value={cpfMin} onChange={e=>setCpfMin(parseFloat(e.target.value)||0)} className="follower-input" placeholder="Min ($)" />
+                    <input type="number" step={0.1} value={cpfMid} onChange={e=>setCpfMid(parseFloat(e.target.value)||0)} className="follower-input" placeholder="Mid ($)" />
+                    <input type="number" step={0.1} value={cpfMax} onChange={e=>setCpfMax(parseFloat(e.target.value)||0)} className="follower-input" placeholder="Max ($)" />
+                  </div>
+                  <div className="ai-note">Use ranges to frame outcomes rather than a single point prediction.</div>
                 </div>
               </>
             )}

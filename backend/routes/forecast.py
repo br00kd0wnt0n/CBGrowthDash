@@ -67,6 +67,12 @@ async def run_forecast(request: ForecastRequest):
             paid_impressions_per_week_total=(request.paid_impressions_per_week_total or 0.0),
             paid_allocation=(request.paid_allocation or None),
             paid_funnel=(request.paid_funnel or None),
+            paid_budget_per_week_total=(request.paid_budget_per_week_total or 0.0),
+            creator_budget_per_week_total=(request.creator_budget_per_week_total or 0.0),
+            acquisition_budget_per_week_total=(request.acquisition_budget_per_week_total or 0.0),
+            cpf_paid=(request.cpf_paid or None),
+            cpf_creator=(request.cpf_creator or None),
+            cpf_acquisition=(request.cpf_acquisition or None),
         )
 
         # Convert to response format
