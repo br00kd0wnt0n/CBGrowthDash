@@ -78,6 +78,9 @@ export function Dashboard() {
   const [scenarios, setScenarios] = useState<ScenarioWithForecast[]>([])
   const [expandedContentMix, setExpandedContentMix] = useState<string | null>(null)
   const [historicalTab, setHistoricalTab] = useState<'mentions' | 'sentiment' | 'tags'>('mentions')
+  // Confidence band totals (per month)
+  const [bandHigh, setBandHigh] = useState<number[] | null>(null) // optimistic (CPF min)
+  const [bandLow, setBandLow] = useState<number[] | null>(null)   // pessimistic (CPF max)
 
   const totalFollowers = Object.values(currentFollowers).reduce((a, b) => a + b, 0)
   const goalFollowers = totalFollowers * 2 // Double in 12 months
@@ -145,6 +148,45 @@ export function Dashboard() {
 
       const results = await api.runForecast(request)
       setForecastResults(results)
+
+      // Confidence band using CPF min/max when budget modeling is enabled
+      if (enableBudget) {
+        const baseBandReq = {
+          current_followers: currentFollowers,
+          platform_allocation: platformAllocation,
+          content_mix_by_platform: contentMix,
+          months,
+          preset,
+          ...(enablePaid ? { paid_impressions_per_week_total: computedImpr, paid_allocation: paidAllocation } : {}),
+          paid_budget_per_week_total: paidBudgetWeek,
+          creator_budget_per_week_total: creatorBudgetWeek,
+          acquisition_budget_per_week_total: acquisitionBudgetWeek,
+        } as ForecastRequest
+
+        // Optimistic (CPF min)
+        const optimisticReq: ForecastRequest = {
+          ...baseBandReq,
+          cpf_paid: { min: cpfMin, mid: cpfMin, max: cpfMin },
+          cpf_creator: { min: cpfMin, mid: cpfMin, max: cpfMin },
+          cpf_acquisition: { min: cpfMin, mid: cpfMin, max: cpfMin },
+        }
+        const pessimisticReq: ForecastRequest = {
+          ...baseBandReq,
+          cpf_paid: { min: cpfMax, mid: cpfMax, max: cpfMax },
+          cpf_creator: { min: cpfMax, mid: cpfMax, max: cpfMax },
+          cpf_acquisition: { min: cpfMax, mid: cpfMax, max: cpfMax },
+        }
+
+        const [optRes, pessRes] = await Promise.all([
+          api.runForecast(optimisticReq),
+          api.runForecast(pessimisticReq),
+        ])
+        setBandHigh(optRes.monthly_data.map(m => m.total))
+        setBandLow(pessRes.monthly_data.map(m => m.total))
+      } else {
+        setBandHigh(null)
+        setBandLow(null)
+      }
     } catch (err) {
       console.error('Failed to run forecast:', err)
     } finally {
@@ -250,6 +292,9 @@ export function Dashboard() {
       YouTube: Math.round(item.YouTube),
       Facebook: Math.round(item.Facebook)
     }
+
+    if (bandHigh && bandHigh[idx] !== undefined) dataPoint.BandHigh = Math.round(bandHigh[idx])
+    if (bandLow && bandLow[idx] !== undefined) dataPoint.BandLow = Math.round(bandLow[idx])
 
     // Add visible scenario lines
     scenarios.forEach(scenario => {
@@ -588,6 +633,12 @@ export function Dashboard() {
                   strokeDasharray="5 5"
                   label={{ value: 'Goal', position: 'right', fill: 'var(--fountain-blue)' }}
                 />
+                {enableBudget && bandHigh && bandLow && (
+                  <>
+                    <Line type="monotone" dataKey="BandHigh" stroke="#94a3b8" strokeWidth={2} dot={false} strokeDasharray="6 6" name="Optimistic (CPF min)" />
+                    <Line type="monotone" dataKey="BandLow" stroke="#9ca3af" strokeWidth={2} dot={false} strokeDasharray="6 6" name="Pessimistic (CPF max)" />
+                  </>
+                )}
                 <Line type="monotone" dataKey="Total" stroke="var(--text-primary)" strokeWidth={4} dot={false} name="Total (Manual)" />
                 <Line type="monotone" dataKey="Instagram" stroke="#E1306C" strokeWidth={2} dot={false} strokeDasharray="3 3" />
                 <Line type="monotone" dataKey="TikTok" stroke="#000000" strokeWidth={2} dot={false} strokeDasharray="3 3" />
