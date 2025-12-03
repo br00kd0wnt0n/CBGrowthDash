@@ -64,6 +64,9 @@ async def run_forecast(request: ForecastRequest):
             campaign_lift=preset_cfg["campaign_lift"],
             sensitivity=preset_cfg["sensitivity"],
             acq_scalar=preset_cfg["acq_scalar"],
+            paid_impressions_per_week_total=(request.paid_impressions_per_week_total or 0.0),
+            paid_allocation=(request.paid_allocation or None),
+            paid_funnel=(request.paid_funnel or None),
         )
 
         # Convert to response format

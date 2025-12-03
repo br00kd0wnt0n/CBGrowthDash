@@ -21,6 +21,20 @@ class ForecastRequest(BaseModel):
     )
     months: int = Field(ge=3, le=24, description="Projection horizon in months")
     preset: str = Field(description="Strategy preset: Conservative, Balanced, or Ambitious")
+    # Optional paid media inputs
+    paid_impressions_per_week_total: Optional[float] = Field(
+        default=0.0,
+        ge=0,
+        description="Total paid impressions per week across platforms"
+    )
+    paid_allocation: Optional[Dict[str, float]] = Field(
+        default=None,
+        description="Paid impressions allocation percentages per platform (0-100). Defaults to platform_allocation if omitted."
+    )
+    paid_funnel: Optional[Dict[str, Dict[str, float]]] = Field(
+        default=None,
+        description="Optional per-platform paid funnel rates: {platform: {vtr, er, fcr}} where vtr=view-through rate (views/impressions), er=engagement rate (engagements/views), fcr=follow conversion rate (follows/engagement)."
+    )
 
 
 class MonthlyForecast(BaseModel):

@@ -55,6 +55,15 @@ PRESETS = {
     "Ambitious":    {"campaign_lift": 0.35, "sensitivity": 0.65, "acq_scalar": 1.5},
 }
 
+# Paid funnel default rates (industry-informed, adjustable)
+# vtr: views per impression; er: engagements per view; fcr: follows per engagement
+PAID_FUNNEL_DEFAULT = {
+    "Instagram": {"vtr": 0.35, "er": 0.025, "fcr": 0.015},
+    "TikTok":    {"vtr": 0.40, "er": 0.030, "fcr": 0.012},
+    "YouTube":   {"vtr": 0.30, "er": 0.020, "fcr": 0.010},
+    "Facebook":  {"vtr": 0.28, "er": 0.015, "fcr": 0.008},
+}
+
 
 def saturating_effect(freq_per_week: float, half_sat: float) -> float:
     if half_sat <= 0:
@@ -140,6 +149,9 @@ def forecast_growth(
     campaign_lift: float = 0.0,
     sensitivity: float = 0.5,
     acq_scalar: float = 1.0,
+    paid_impressions_per_week_total: float = 0.0,
+    paid_allocation: Dict[str, float] | None = None,
+    paid_funnel: Dict[str, Dict[str, float]] | None = None,
 ) -> pd.DataFrame:
     """Run growth forecast simulation"""
     weeks = months * 4 + 4
@@ -155,6 +167,15 @@ def forecast_growth(
     total_alloc = sum(alloc_frac.values()) or 1.0
     alloc_frac = {p: v/total_alloc for p, v in alloc_frac.items()}
     posts_per_platform = {p: posts_per_week_total * alloc_frac[p] for p in PLATFORMS}
+
+    # Paid allocation
+    if paid_allocation is None:
+        paid_alloc_frac = alloc_frac.copy()
+    else:
+        paid_alloc_frac = {p: max(paid_allocation.get(p, 0.0), 0.0) for p in PLATFORMS}
+        total_paid_alloc = sum(paid_alloc_frac.values()) or 1.0
+        paid_alloc_frac = {p: v/total_paid_alloc for p, v in paid_alloc_frac.items()}
+    paid_funnel = paid_funnel or PAID_FUNNEL_DEFAULT
 
     # Normalize content mixes
     content_mix_norm = {}
@@ -193,7 +214,14 @@ def forecast_growth(
             per_post = PER_POST_GAIN_BASE[p] * acq_scalar * quality * sat_quality * content_mult * div_factor * over_pen * consist
             add_posts = posts_per_platform[p] * per_post
 
-            add = mult_add + add_posts
+            # Paid media additive followers this week
+            paid_impr = paid_impressions_per_week_total * paid_alloc_frac[p]
+            rates = paid_funnel.get(p, PAID_FUNNEL_DEFAULT[p])
+            paid_follows = paid_impr * rates.get("vtr", 0.3) * rates.get("er", 0.02) * rates.get("fcr", 0.01)
+            # modestly scale by content suitability
+            paid_follows *= (0.8 + 0.2 * content_mult)
+
+            add = mult_add + add_posts + paid_follows
             followers[p] += add
             week_snapshot[p] = followers[p]
 

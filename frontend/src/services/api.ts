@@ -15,6 +15,10 @@ export interface ForecastRequest {
   content_mix_by_platform: Record<string, Record<string, number>>;
   months: number;
   preset: string;
+  // Optional paid media fields
+  paid_impressions_per_week_total?: number;
+  paid_allocation?: Record<string, number>;
+  paid_funnel?: Record<string, { vtr: number; er: number; fcr: number }>;
 }
 
 export interface MonthlyForecast {

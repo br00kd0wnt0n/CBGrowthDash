@@ -54,6 +54,15 @@ export function Dashboard() {
   })
   const [preset, setPreset] = useState('Balanced')
   const [months, setMonths] = useState(12)
+  // Paid media state
+  const [enablePaid, setEnablePaid] = useState(false)
+  const [paidImpressionsWeek, setPaidImpressionsWeek] = useState(0)
+  const [paidAllocation, setPaidAllocation] = useState({
+    Instagram: 35,
+    TikTok: 35,
+    YouTube: 15,
+    Facebook: 15
+  })
 
   // AI Insights state
   const [aiInsights, setAiInsights] = useState<AIInsightsResponse | null>(null)
@@ -82,6 +91,13 @@ export function Dashboard() {
     return () => clearTimeout(timer)
   }, [currentFollowers, postsPerWeek, platformAllocation, contentMix, preset, months])
 
+  // Keep paid allocation in sync with organic when paid is disabled
+  useEffect(() => {
+    if (!enablePaid) {
+      setPaidAllocation(platformAllocation as any)
+    }
+  }, [platformAllocation, enablePaid])
+
   const loadHistoricalData = async () => {
     try {
       const data = await api.getHistoricalData()
@@ -100,7 +116,11 @@ export function Dashboard() {
         platform_allocation: platformAllocation,
         content_mix_by_platform: contentMix,
         months,
-        preset
+        preset,
+        ...(enablePaid ? {
+          paid_impressions_per_week_total: paidImpressionsWeek,
+          paid_allocation: paidAllocation,
+        } : {})
       }
 
       const results = await api.runForecast(request)
@@ -143,7 +163,11 @@ export function Dashboard() {
             platform_allocation: scenario.platform_allocation,
             content_mix_by_platform: contentMix,
             months,
-            preset: preset  // Use the original user-selected preset
+            preset: preset,  // Use the original user-selected preset
+            ...(enablePaid ? {
+              paid_impressions_per_week_total: paidImpressionsWeek,
+              paid_allocation: paidAllocation,
+            } : {})
           }
           const forecast = await api.runForecast(scenarioRequest)
           scenario.forecast = forecast
@@ -281,6 +305,55 @@ export function Dashboard() {
                 <option>Ambitious</option>
               </select>
             </div>
+          </div>
+
+          <div className="panel-section">
+            <h3 className="section-header">
+              Paid Media
+              <HelpTooltip text="Optional: Include paid impressions per week and how they are allocated by platform. Uses industry conversion defaults (imp → views → engagements → follows)." />
+            </h3>
+            <div className="control-group" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+              <label>Enable Paid Media</label>
+              <input type="checkbox" checked={enablePaid} onChange={e=>setEnablePaid(e.target.checked)} />
+            </div>
+            {enablePaid && (
+              <>
+                <div className="control-group">
+                  <label>Total Paid Impressions / Week</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1000}
+                    value={paidImpressionsWeek}
+                    onChange={e=>setPaidImpressionsWeek(parseInt(e.target.value)||0)}
+                    className="follower-input"
+                  />
+                </div>
+                <div className="control-group">
+                  <label>Paid Allocation (must total 100%)</label>
+                  {Object.keys(paidAllocation).map(platform => (
+                    <div key={platform} className="platform-control">
+                      <div className="platform-header">
+                        <span className="platform-name">{platform}</span>
+                        <span className="platform-percent">{paidAllocation[platform as keyof typeof paidAllocation]}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={paidAllocation[platform as keyof typeof paidAllocation]}
+                        onChange={e => {
+                          const val = parseInt(e.target.value)
+                          setPaidAllocation(prev => ({...prev, [platform]: val}))
+                        }}
+                        className="slider platform-slider"
+                      />
+                    </div>
+                  ))}
+                  <div className="ai-note">Tip: Defaults mirror your organic platform allocation.</div>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="panel-section">
