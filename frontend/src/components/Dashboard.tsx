@@ -651,7 +651,7 @@ export function Dashboard() {
         {/* Right Panel: Visualizations */}
         <div className="viz-panel">
           {/* At-a-glance KPIs */}
-          <div className="metrics-row" style={{marginBottom:'1rem'}}>
+          <div className="metrics-row" style={{marginBottom:'1rem', gridTemplateColumns:'repeat(5, 1fr)'}}>
             <div className="metric-card">
               <div className="metric-label">Current Reach</div>
               <div className="metric-value">{(totalFollowers / 1000000).toFixed(2)}M</div>
@@ -673,7 +673,12 @@ export function Dashboard() {
                 <HelpTooltip text={"ROI = (Added Followers × Value per New Follower − Spend) / Spend. Set Value per New Follower in Step 6 (Growth Strategy & Metrics)."} />
               </div>
               <div className="metric-value">{estROI !== null ? `${estROI.toFixed(0)}%` : '—'}</div>
-              <div className="metric-subtitle">Mid CPF ${cpfMid.toFixed(2)} | Blended {blendedCPF > 0 ? `$${blendedCPF.toFixed(2)}` : '—'} | Spend ${(totalSpend/1000).toFixed(1)}k</div>
+              <div className="metric-subtitle">Mid CPF ${cpfMid.toFixed(2)} | Blended {blendedCPF > 0 ? `$${blendedCPF.toFixed(2)}` : '—'} | Spend {(totalSpend/1000).toFixed(1)}k</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-label">Total Spend</div>
+              <div className="metric-value">${(monthlySpend/1000).toFixed(1)}k</div>
+              <div className="metric-subtitle">Monthly • Annual {(annualSpend/1000).toFixed(1)}k</div>
             </div>
           </div>
 
