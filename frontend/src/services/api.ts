@@ -36,6 +36,7 @@ export interface ForecastResponse {
   goal: number;
   projected_total: number;
   progress_to_goal: number;
+  added_breakdown?: { month: number; organic_added: number; paid_added: number; total_added: number }[];
 }
 
 export interface HistoricalDataResponse {

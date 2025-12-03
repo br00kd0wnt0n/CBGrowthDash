@@ -79,6 +79,8 @@ class ForecastResponse(BaseModel):
     goal: float
     projected_total: float
     progress_to_goal: float
+    # Optional acquisition breakdown by month
+    added_breakdown: Optional[List[dict]] = None
 
 
 class HistoricalDataResponse(BaseModel):

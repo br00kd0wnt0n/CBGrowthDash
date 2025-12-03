@@ -77,6 +77,7 @@ async def run_forecast(request: ForecastRequest):
 
         # Convert to response format
         monthly_data = []
+        added_breakdown = []
         for _, row in monthly_df.iterrows():
             monthly_data.append(MonthlyForecast(
                 month=int(row["Month"]),
@@ -87,6 +88,12 @@ async def run_forecast(request: ForecastRequest):
                 total=float(row["Total"]),
                 added=float(row["Added"])
             ))
+            added_breakdown.append({
+                "month": int(row["Month"]),
+                "organic_added": float(row.get("Added_Organic", 0.0)),
+                "paid_added": float(row.get("Added_Paid", 0.0)),
+                "total_added": float(row.get("Added", 0.0)),
+            })
 
         # Calculate goal metrics
         total_current = sum(request.current_followers.values())
@@ -98,7 +105,8 @@ async def run_forecast(request: ForecastRequest):
             monthly_data=monthly_data,
             goal=goal,
             projected_total=projected_total,
-            progress_to_goal=progress_to_goal
+            progress_to_goal=progress_to_goal,
+            added_breakdown=added_breakdown
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

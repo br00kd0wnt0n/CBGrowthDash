@@ -206,6 +206,8 @@ def forecast_growth(
     for w in range(weeks):
         ei = weekly_engagement_forecast[w]
         week_snapshot = {"Week": w}
+        total_added_org = 0.0
+        total_added_paid = 0.0
 
         for p in PLATFORMS:
             freq_eff = saturating_effect(posts_per_platform[p], FREQ_HALF_SAT[p])
@@ -247,11 +249,17 @@ def forecast_growth(
             if acquisition_budget_per_week_total > 0 and cpf_acquisition.get("mid", 4.0) > 0:
                 acq_budget_follows = (acquisition_budget_per_week_total * alloc_frac[p]) / cpf_acquisition.get("mid", 4.0)
 
-            add = mult_add + add_posts + paid_follows + paid_budget_follows + creator_budget_follows + acq_budget_follows
+            add_org = mult_add + add_posts
+            add_paid = paid_follows + paid_budget_follows + creator_budget_follows + acq_budget_follows
+            add = add_org + add_paid
             followers[p] += add
             week_snapshot[p] = followers[p]
+            total_added_org += add_org
+            total_added_paid += add_paid
 
         week_snapshot['Total'] = sum(followers.values())
+        week_snapshot['Added_Organic'] = total_added_org
+        week_snapshot['Added_Paid'] = total_added_paid
         weekly.append(week_snapshot)
 
     weekly_df = pd.DataFrame(weekly)
@@ -266,7 +274,14 @@ def forecast_growth(
         for p in PLATFORMS:
             row[p] = float(weekly_df.loc[end_idx, p])
         row["Total"] = float(weekly_df.loc[end_idx, 'Total'])
-        row["Added"] = row["Total"] - start_total
+        # Sum weekly adds across this month
+        start_idx = m*4
+        month_slice = weekly_df.iloc[start_idx:end_idx+1]
+        added_org = float(month_slice['Added_Organic'].sum()) if 'Added_Organic' in month_slice.columns else 0.0
+        added_paid = float(month_slice['Added_Paid'].sum()) if 'Added_Paid' in month_slice.columns else 0.0
+        row["Added"] = added_org + added_paid
+        row["Added_Organic"] = added_org
+        row["Added_Paid"] = added_paid
         monthly_rows.append(row)
 
     return pd.DataFrame(monthly_rows)

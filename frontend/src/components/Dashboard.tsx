@@ -54,9 +54,11 @@ export function Dashboard() {
   })
   const [preset, setPreset] = useState('Balanced')
   const [months, setMonths] = useState(12)
-  // Paid media state
+  // Paid funnel (CPM) state
   const [enablePaid, setEnablePaid] = useState(false)
   const [paidImpressionsWeek, setPaidImpressionsWeek] = useState(0)
+  const [paidFunnelBudgetWeek, setPaidFunnelBudgetWeek] = useState(0)
+  const [paidCPM, setPaidCPM] = useState(10)
   const [paidAllocation, setPaidAllocation] = useState({
     Instagram: 35,
     TikTok: 35,
@@ -118,6 +120,9 @@ export function Dashboard() {
   const runForecast = async () => {
     setLoading(true)
     try {
+      // Compute impressions from CPM if enabled
+      const computedImpr = enablePaid && paidCPM > 0 ? Math.round((paidFunnelBudgetWeek / paidCPM) * 1000) : 0
+
       const request: ForecastRequest = {
         current_followers: currentFollowers,
         posts_per_week_total: postsPerWeek,
@@ -126,7 +131,7 @@ export function Dashboard() {
         months,
         preset,
         ...(enablePaid ? {
-          paid_impressions_per_week_total: paidImpressionsWeek,
+          paid_impressions_per_week_total: computedImpr,
           paid_allocation: paidAllocation,
         } : {}),
         ...(enableBudget ? {
@@ -181,7 +186,7 @@ export function Dashboard() {
             months,
             preset: preset,  // Use the original user-selected preset
             ...(enablePaid ? {
-              paid_impressions_per_week_total: paidImpressionsWeek,
+              paid_impressions_per_week_total: computedImpr,
               paid_allocation: paidAllocation,
             } : {}),
             ...(enableBudget ? {
@@ -253,6 +258,14 @@ export function Dashboard() {
 
     return dataPoint
   }) || []
+
+  // Breakdown (last month)
+  const lastBreakdown = forecastResults?.added_breakdown?.[forecastResults.added_breakdown.length - 1]
+  const lastPaid = lastBreakdown ? lastBreakdown.paid_added : 0
+  const lastOrg = lastBreakdown ? lastBreakdown.organic_added : 0
+  const lastTotalAdded = lastBreakdown ? lastBreakdown.total_added : 0
+  const paidPct = lastTotalAdded > 0 ? (lastPaid / lastTotalAdded) * 100 : 0
+  const orgPct = lastTotalAdded > 0 ? (lastOrg / lastTotalAdded) * 100 : 0
 
   const riskLevel = postsPerWeek > 35 ? 'HIGH' : postsPerWeek > 28 ? 'MEDIUM' : 'LOW'
   const riskColor = riskLevel === 'HIGH' ? 'var(--bittersweet)' : riskLevel === 'MEDIUM' ? 'var(--texas-rose)' : 'var(--fountain-blue)'
@@ -343,15 +356,13 @@ export function Dashboard() {
             {enablePaid && (
               <>
                 <div className="control-group">
-                  <label>Total Paid Impressions / Week</label>
-                  <input
-                    type="number"
-                    min={0}
-                    step={1000}
-                    value={paidImpressionsWeek}
-                    onChange={e=>setPaidImpressionsWeek(parseInt(e.target.value)||0)}
-                    className="follower-input"
-                  />
+                  <label>Paid Funnel Budget / Week (USD)</label>
+                  <input type="number" min={0} step={100} value={paidFunnelBudgetWeek} onChange={e=>setPaidFunnelBudgetWeek(parseInt(e.target.value)||0)} className="follower-input" />
+                </div>
+                <div className="control-group">
+                  <label>CPM (USD per 1000 impressions)</label>
+                  <input type="number" min={1} step={0.5} value={paidCPM} onChange={e=>setPaidCPM(parseFloat(e.target.value)||0)} className="follower-input" />
+                  <div className="ai-note">Impressions/week = (Paid Funnel Budget / CPM) × 1000</div>
                 </div>
                 <div className="control-group">
                   <label>Paid Allocation (must total 100%)</label>
@@ -374,7 +385,7 @@ export function Dashboard() {
                       />
                     </div>
                   ))}
-                  <div className="ai-note">Tip: Defaults mirror your organic platform allocation.</div>
+                  <div className="ai-note">Tip: Defaults mirror your organic platform allocation. Impressions are derived from CPM × Budget.</div>
                 </div>
               </>
             )}
@@ -633,6 +644,32 @@ export function Dashboard() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Acquisition Breakdown */}
+          {forecastResults?.added_breakdown && (
+            <div className="chart-container">
+              <div className="chart-header">
+                <h2>Acquisition Breakdown (Last Month)</h2>
+              </div>
+              <div style={{display:'grid', gridTemplateColumns:'1fr 2fr', gap:'16px', alignItems:'center'}}>
+                <div className="metrics-row" style={{gridTemplateColumns:'1fr 1fr'}}>
+                  <div className="metric-card">
+                    <div className="metric-label">Added Followers</div>
+                    <div className="metric-value">{(lastTotalAdded/1000).toFixed(1)}K</div>
+                    <div className="metric-subtitle">Month {forecastResults.added_breakdown.length}</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="metric-label">Paid vs Organic</div>
+                    <div className="metric-value">{paidPct.toFixed(0)}% / {orgPct.toFixed(0)}%</div>
+                    <div className="metric-subtitle">Paid / Organic</div>
+                  </div>
+                </div>
+                <div style={{height:'18px', background:'var(--bg-secondary)', borderRadius:'10px', overflow:'hidden', border:'1px solid var(--border)'}}>
+                  <div style={{width: `${paidPct}%`, height:'100%', background:'var(--primary)'}}></div>
+                </div>
               </div>
             </div>
           )}
