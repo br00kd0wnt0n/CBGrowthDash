@@ -70,6 +70,8 @@ export function Dashboard() {
   useEffect(() => {
     loadHistoricalData()
     runForecast() // Initial forecast
+    // Auto-generate AI insights on first load
+    getAIRecommendations()
   }, [])
 
   // Auto-run forecast when inputs change (with debounce)
@@ -372,7 +374,7 @@ export function Dashboard() {
               disabled={aiLoading}
               className="ai-button"
             >
-              {aiLoading ? 'Analyzing...' : '✨ Get AI Recommendations'}
+              {aiLoading ? 'Analyzing...' : '🔁 Regenerate Insights'}
             </button>
 
             {aiInsights && (
