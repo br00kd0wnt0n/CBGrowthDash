@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { LineChart, ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { api, type HistoricalDataResponse, type ForecastRequest, type ForecastResponse, type AIInsightsResponse, type AIScenario } from '../services/api'
 import './Dashboard.css'
 
@@ -101,7 +101,27 @@ export function Dashboard() {
       runForecast()
     }, 500)
     return () => clearTimeout(timer)
-  }, [currentFollowers, postsPerWeek, platformAllocation, contentMix, preset, months])
+  }, [
+    currentFollowers,
+    postsPerWeek,
+    platformAllocation,
+    contentMix,
+    preset,
+    months,
+    // Paid funnel deps
+    enablePaid,
+    paidFunnelBudgetWeek,
+    paidCPM,
+    paidAllocation,
+    // Budget model deps
+    enableBudget,
+    paidBudgetWeek,
+    creatorBudgetWeek,
+    acquisitionBudgetWeek,
+    cpfMin,
+    cpfMid,
+    cpfMax,
+  ])
 
   // Keep paid allocation in sync with organic when paid is disabled
   useEffect(() => {
@@ -619,7 +639,7 @@ export function Dashboard() {
             )}
 
             <ResponsiveContainer width="100%" height={400}>
-              <LineChart data={chartData}>
+              <ComposedChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="month" stroke="var(--text-secondary)" />
                 <YAxis stroke="var(--text-secondary)" tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} />
@@ -636,8 +656,10 @@ export function Dashboard() {
                 />
                 {enableBudget && bandHigh && bandLow && (
                   <>
-                    <Line type="monotone" dataKey="BandHigh" stroke="#94a3b8" strokeWidth={2} dot={false} strokeDasharray="6 6" name="Optimistic (CPF min)" />
-                    <Line type="monotone" dataKey="BandLow" stroke="#9ca3af" strokeWidth={2} dot={false} strokeDasharray="6 6" name="Pessimistic (CPF max)" />
+                    <Area type="monotone" dataKey="BandLow" stackId="band" stroke="none" fill="transparent" />
+                    <Area type="monotone" dataKey="BandDelta" stackId="band" stroke="none" fill="rgba(79,70,229,0.18)" />
+                    <Line type="monotone" dataKey="BandHigh" stroke="#8b8fb4" strokeWidth={1.5} dot={false} strokeDasharray="6 6" name="Optimistic (CPF min)" />
+                    <Line type="monotone" dataKey="BandLow" stroke="#8b8fb4" strokeWidth={1.5} dot={false} strokeDasharray="6 6" name="Pessimistic (CPF max)" />
                   </>
                 )}
                 <Line type="monotone" dataKey="Total" stroke="var(--text-primary)" strokeWidth={4} dot={false} name="Total (Manual)" />
@@ -658,7 +680,7 @@ export function Dashboard() {
                     />
                   )
                 )}
-              </LineChart>
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
 
