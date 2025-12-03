@@ -672,16 +672,16 @@ export function Dashboard() {
                 {enableBudget && bandHigh && bandLow && (
                   <>
                     <Area type="monotone" dataKey="BandLow" stackId="band" stroke="none" fill="transparent" />
-                    <Area type="monotone" dataKey="BandDelta" stackId="band" stroke="none" fill="rgba(79,70,229,0.18)" />
-                    <Line type="monotone" dataKey="BandHigh" stroke="#8b8fb4" strokeWidth={1.5} dot={false} strokeDasharray="6 6" name="Optimistic (CPF min)" />
-                    <Line type="monotone" dataKey="BandLow" stroke="#8b8fb4" strokeWidth={1.5} dot={false} strokeDasharray="6 6" name="Pessimistic (CPF max)" />
+                    <Area type="monotone" dataKey="BandDelta" stackId="band" stroke="none" fill={SERIES_COLORS.bandFill} />
+                    <Line type="monotone" dataKey="BandHigh" stroke={SERIES_COLORS.bandEdge} strokeWidth={1.5} dot={false} strokeDasharray="6 6" name="Optimistic (CPF min)" />
+                    <Line type="monotone" dataKey="BandLow" stroke={SERIES_COLORS.bandEdge} strokeWidth={1.5} dot={false} strokeDasharray="6 6" name="Pessimistic (CPF max)" />
                   </>
                 )}
-                <Line type="monotone" dataKey="Total" stroke="var(--text-primary)" strokeWidth={4} dot={false} name="Total (Manual)" />
-                <Line type="monotone" dataKey="Instagram" stroke="#E1306C" strokeWidth={2} dot={false} strokeDasharray="3 3" />
-                <Line type="monotone" dataKey="TikTok" stroke="#000000" strokeWidth={2} dot={false} strokeDasharray="3 3" />
-                <Line type="monotone" dataKey="YouTube" stroke="#FF0000" strokeWidth={2} dot={false} strokeDasharray="3 3" />
-                <Line type="monotone" dataKey="Facebook" stroke="#1877F2" strokeWidth={2} dot={false} strokeDasharray="3 3" />
+                <Line type="monotone" dataKey="Total" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} name="Total (Manual)" />
+                <Line type="monotone" dataKey="Instagram" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} strokeDasharray="4 2" />
+                <Line type="monotone" dataKey="TikTok" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} strokeDasharray="3 3" />
+                <Line type="monotone" dataKey="YouTube" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} strokeDasharray="6 3" />
+                <Line type="monotone" dataKey="Facebook" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} strokeDasharray="2 2" />
                 {scenarios.map((scenario, idx) =>
                   scenario.visible && (
                     <Line
@@ -840,7 +840,7 @@ export function Dashboard() {
                         contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
                       />
                       <Legend />
-                      <Line type="monotone" dataKey="Mentions" stroke="var(--fountain-blue)" strokeWidth={2} />
+                    <Line type="monotone" dataKey="Mentions" stroke={SERIES_COLORS.mentions} strokeWidth={2.5} />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -855,9 +855,9 @@ export function Dashboard() {
                         contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
                       />
                       <Legend />
-                      <Line type="monotone" dataKey="Positive" stroke="#4ade80" strokeWidth={2} />
-                      <Line type="monotone" dataKey="Neutral" stroke="#94a3b8" strokeWidth={2} />
-                      <Line type="monotone" dataKey="Negative" stroke="#ef4444" strokeWidth={2} />
+                      <Line type="monotone" dataKey="Positive" stroke={SERIES_COLORS.sentimentPos} strokeWidth={2.5} />
+                      <Line type="monotone" dataKey="Neutral" stroke={SERIES_COLORS.sentimentNeu} strokeWidth={2.5} />
+                      <Line type="monotone" dataKey="Negative" stroke={SERIES_COLORS.sentimentNeg} strokeWidth={2.5} />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -872,9 +872,9 @@ export function Dashboard() {
                         contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
                       />
                       <Legend />
-                      <Line type="monotone" dataKey="Official Care Bears" stroke="var(--fountain-blue)" strokeWidth={2} name="Official Care Bears" />
-                      <Line type="monotone" dataKey="Stranger Things" stroke="var(--bittersweet)" strokeWidth={2} name="Stranger Things" />
-                      <Line type="monotone" dataKey="Wicked" stroke="var(--texas-rose)" strokeWidth={2} name="Wicked" />
+                      <Line type="monotone" dataKey="Official Care Bears" stroke={SERIES_COLORS.tag1} strokeWidth={2.5} name="Official Care Bears" />
+                      <Line type="monotone" dataKey="Stranger Things" stroke={SERIES_COLORS.tag2} strokeWidth={2.5} name="Stranger Things" />
+                      <Line type="monotone" dataKey="Wicked" stroke={SERIES_COLORS.tag3} strokeWidth={2.5} name="Wicked" />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -885,4 +885,21 @@ export function Dashboard() {
       </div>
     </div>
   )
+}
+// Distinct, accessible series colors
+const SERIES_COLORS = {
+  total: '#FFFFFF',            // bright white for the main total line
+  instagram: '#D946EF',        // fuchsia
+  tiktok: '#06B6D4',           // cyan
+  youtube: '#EF4444',          // red
+  facebook: '#3B82F6',         // blue
+  bandFill: 'rgba(99,102,241,0.22)', // indigo fill for confidence band
+  bandEdge: '#A5B4FC',         // light indigo for band edges
+  mentions: '#22D3EE',         // cyan for mentions
+  sentimentPos: '#10B981',     // green
+  sentimentNeu: '#9CA3AF',     // gray
+  sentimentNeg: '#EF4444',     // red
+  tag1: '#6366F1',             // indigo
+  tag2: '#F97316',             // orange
+  tag3: '#10B981',             // green
 }
