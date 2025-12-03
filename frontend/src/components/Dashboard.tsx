@@ -81,6 +81,8 @@ export function Dashboard() {
   // Confidence band totals (per month)
   const [bandHigh, setBandHigh] = useState<number[] | null>(null) // optimistic (CPF min)
   const [bandLow, setBandLow] = useState<number[] | null>(null)   // pessimistic (CPF max)
+  // Month selector for acquisition breakdown
+  const [selectedBreakdownIndex, setSelectedBreakdownIndex] = useState<number>(0)
 
   const totalFollowers = Object.values(currentFollowers).reduce((a, b) => a + b, 0)
   const goalFollowers = totalFollowers * 2 // Double in 12 months
@@ -327,11 +329,20 @@ export function Dashboard() {
     return dataPoint
   }) || []
 
-  // Breakdown (last month)
-  const lastBreakdown = forecastResults?.added_breakdown?.[forecastResults.added_breakdown.length - 1]
-  const lastPaid = lastBreakdown ? lastBreakdown.paid_added : 0
-  const lastOrg = lastBreakdown ? lastBreakdown.organic_added : 0
-  const lastTotalAdded = lastBreakdown ? lastBreakdown.total_added : 0
+  // Keep selected month in range when results change (default to latest)
+  useEffect(() => {
+    const list = forecastResults?.added_breakdown || []
+    if (list.length > 0) {
+      setSelectedBreakdownIndex(Math.max(0, Math.min(list.length - 1, selectedBreakdownIndex)))
+    }
+  }, [forecastResults?.added_breakdown])
+
+  // Breakdown (selected month)
+  const breakdownList = forecastResults?.added_breakdown || []
+  const selectedBreakdown = breakdownList[selectedBreakdownIndex]
+  const lastPaid = selectedBreakdown ? selectedBreakdown.paid_added : 0
+  const lastOrg = selectedBreakdown ? selectedBreakdown.organic_added : 0
+  const lastTotalAdded = selectedBreakdown ? selectedBreakdown.total_added : 0
   const paidPct = lastTotalAdded > 0 ? (lastPaid / lastTotalAdded) * 100 : 0
   const orgPct = lastTotalAdded > 0 ? (lastOrg / lastTotalAdded) * 100 : 0
 
@@ -412,6 +423,7 @@ export function Dashboard() {
             </div>
           </div>
 
+          {/* Repositioned: Paid Media and Budget panels after Content Mix */}
           <div className="panel-section">
             <h3 className="section-header">
               Paid Media
@@ -494,6 +506,9 @@ export function Dashboard() {
               </>
             )}
           </div>
+          {/* Paid Media panel moved below Content Mix for a more natural workflow */}
+
+          {/* Growth Strategy & Metrics panel moved below Content Mix */}
 
           <div className="panel-section">
             <h3 className="section-header">
@@ -727,15 +742,28 @@ export function Dashboard() {
           {/* Acquisition Breakdown */}
           {forecastResults?.added_breakdown && (
             <div className="chart-container">
-              <div className="chart-header">
-                <h2>Acquisition Breakdown (Last Month)</h2>
+              <div className="chart-header" style={{gap:'12px'}}>
+                <h2 style={{margin:0}}>Acquisition Breakdown</h2>
+                <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:'8px'}}>
+                  <label style={{fontSize:'0.85rem', color:'var(--text-secondary)'}}>Month</label>
+                  <select
+                    value={selectedBreakdownIndex}
+                    onChange={e=>setSelectedBreakdownIndex(parseInt(e.target.value))}
+                    className="preset-select"
+                    style={{width:'auto', padding:'0.4rem 0.6rem'}}
+                  >
+                    {forecastResults.added_breakdown.map((_, idx) => (
+                      <option key={idx} value={idx}>{`M${idx+1}`}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div style={{display:'grid', gridTemplateColumns:'1fr 2fr', gap:'16px', alignItems:'center'}}>
                 <div className="metrics-row" style={{gridTemplateColumns:'1fr 1fr'}}>
                   <div className="metric-card">
                     <div className="metric-label">Added Followers</div>
                     <div className="metric-value">{(lastTotalAdded/1000).toFixed(1)}K</div>
-                    <div className="metric-subtitle">Month {forecastResults.added_breakdown.length}</div>
+                    <div className="metric-subtitle">Month {selectedBreakdownIndex+1} of {forecastResults.added_breakdown.length}</div>
                   </div>
                   <div className="metric-card">
                     <div className="metric-label">Paid vs Organic</div>
