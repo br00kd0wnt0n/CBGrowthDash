@@ -56,7 +56,6 @@ export function Dashboard() {
   const [months, setMonths] = useState(12)
   // Paid funnel (CPM) state
   const [enablePaid, setEnablePaid] = useState(false)
-  const [paidImpressionsWeek, setPaidImpressionsWeek] = useState(0)
   const [paidFunnelBudgetWeek, setPaidFunnelBudgetWeek] = useState(0)
   const [paidCPM, setPaidCPM] = useState(10)
   const [paidAllocation, setPaidAllocation] = useState({
@@ -156,6 +155,9 @@ export function Dashboard() {
   const getAIRecommendations = async () => {
     setAiLoading(true)
     try {
+      // Compute impressions from CPM if enabled
+      const computedImpr = enablePaid && paidCPM > 0 ? Math.round((paidFunnelBudgetWeek / paidCPM) * 1000) : 0
+
       const request: ForecastRequest = {
         current_followers: currentFollowers,
         posts_per_week_total: postsPerWeek,
