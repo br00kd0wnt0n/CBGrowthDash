@@ -19,6 +19,13 @@ export interface ForecastRequest {
   paid_impressions_per_week_total?: number;
   paid_allocation?: Record<string, number>;
   paid_funnel?: Record<string, { vtr: number; er: number; fcr: number }>;
+  // Optional budget + CPF fields
+  paid_budget_per_week_total?: number;
+  creator_budget_per_week_total?: number;
+  acquisition_budget_per_week_total?: number;
+  cpf_paid?: { min: number; mid: number; max: number };
+  cpf_creator?: { min: number; mid: number; max: number };
+  cpf_acquisition?: { min: number; mid: number; max: number };
 }
 
 export interface MonthlyForecast {

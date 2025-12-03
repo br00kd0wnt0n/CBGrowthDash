@@ -151,8 +151,9 @@ export function Dashboard() {
 
       // Confidence band using CPF min/max when budget modeling is enabled
       if (enableBudget) {
-        const baseBandReq = {
+        const baseBandReq: ForecastRequest = {
           current_followers: currentFollowers,
+          posts_per_week_total: postsPerWeek,
           platform_allocation: platformAllocation,
           content_mix_by_platform: contentMix,
           months,
@@ -161,7 +162,7 @@ export function Dashboard() {
           paid_budget_per_week_total: paidBudgetWeek,
           creator_budget_per_week_total: creatorBudgetWeek,
           acquisition_budget_per_week_total: acquisitionBudgetWeek,
-        } as ForecastRequest
+        }
 
         // Optimistic (CPF min)
         const optimisticReq: ForecastRequest = {
