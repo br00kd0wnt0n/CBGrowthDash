@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Amblin Social Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <img src="../public/amblin/amblin_logo.png" alt="Amblin" class="logo" />
+          <div class="title">
+            <h1>Amblin Social Intelligence</h1>
+            <p>Historical and predictive insights across Engagement, Awareness, Reach, Dwell, and UGC</p>
+          </div>
+        </div>
+        <div class="controls">
+          <label>
+            Time Range
+            <select id="timeRange">
+              <option value="26">26 weeks</option>
+              <option value="52" selected>52 weeks</option>
+            </select>
+          </label>
+          <label>
+            Scenario Preset
+            <select id="preset">
+              <option value="conservative">Conservative</option>
+              <option value="balanced" selected>Balanced</option>
+              <option value="ambitious">Ambitious</option>
+            </select>
+          </label>
+        </div>
+      </header>
+
+      <main>
+        <section class="kpis">
+          <div class="kpi"><div class="kpi-label">Engagement Rate</div><div class="kpi-value" id="kpi-eng">3.2%</div></div>
+          <div class="kpi"><div class="kpi-label">Awareness Index</div><div class="kpi-value" id="kpi-aware">64</div></div>
+          <div class="kpi"><div class="kpi-label">Reach / wk</div><div class="kpi-value" id="kpi-reach">1.2M</div></div>
+          <div class="kpi"><div class="kpi-label">Avg Dwell</div><div class="kpi-value" id="kpi-dwell">38s</div></div>
+          <div class="kpi"><div class="kpi-label">UGC / wk</div><div class="kpi-value" id="kpi-ugc">2.1K</div></div>
+        </section>
+
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Engagement Rate — Historical vs Predictive</h2>
+              <div class="toggles">
+                <label><input type="checkbox" id="chk-ig" checked> Instagram</label>
+                <label><input type="checkbox" id="chk-tt" checked> TikTok</label>
+                <label><input type="checkbox" id="chk-yt" checked> YouTube</label>
+                <label><input type="checkbox" id="chk-fb" checked> Facebook</label>
+              </div>
+            </div>
+            <canvas id="engChart" height="110"></canvas>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Awareness + Reach</h2>
+              <div class="legend-dots">
+                <span class="dot dot-aware"></span> Awareness
+                <span class="dot dot-reach"></span> Reach
+              </div>
+            </div>
+            <canvas id="awareReachChart" height="110"></canvas>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Dwell Time by Platform</h2>
+            </div>
+            <canvas id="dwellChart" height="110"></canvas>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h2>UGC Volume (Posts / wk)</h2>
+            </div>
+            <canvas id="ugcChart" height="110"></canvas>
+          </div>
+        </section>
+
+        <section class="scenario">
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Scenario Controls</h2>
+            </div>
+            <div class="scenario-grid">
+              <label>Posts per week <input id="posts" type="range" min="4" max="120" value="35" /><span id="postsVal">35</span></label>
+              <label>Instagram % <input id="igPct" type="range" min="0" max="100" value="35" /><span id="igVal">35%</span></label>
+              <label>TikTok % <input id="ttPct" type="range" min="0" max="100" value="35" /><span id="ttVal">35%</span></label>
+              <label>YouTube % <input id="ytPct" type="range" min="0" max="100" value="15" /><span id="ytVal">15%</span></label>
+              <label>Facebook % <input id="fbPct" type="range" min="0" max="100" value="15" /><span id="fbVal">15%</span></label>
+            </div>
+            <p class="hint">Percentages auto-balance to 100%. This is a UI mock; no backend required.</p>
+          </div>
+        </section>
+      </main>
+
+      <footer class="foot">
+        <span>Amblin Entertainment — Social Intelligence Mock</span>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+  </html>

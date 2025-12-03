@@ -199,6 +199,102 @@ def consistency_boost(posts_per_week: float, min_ok: float, max_ok: float) -> fl
     return 1.0
 
 
+def generate_ai_insights(
+    monthly: pd.DataFrame,
+    cur_followers: dict,
+    platform_alloc: dict,
+    content_mix_by_platform: dict,
+    posts_per_week_total: float,
+    eng_df: pd.DataFrame,
+    tags_df: pd.DataFrame,
+) -> str:
+    lines = []
+    platforms = PLATFORMS
+    start_total = sum(cur_followers.get(p, 0) for p in platforms)
+    end_total = float(monthly['Total'].iloc[-1]) if len(monthly) else start_total
+    added_total = end_total - start_total
+
+    # 1) Goal trajectory
+    target = start_total * 2
+    hit_month = None
+    for i in range(len(monthly)):
+        if monthly['Total'].iloc[i] >= target:
+            hit_month = int(monthly['Month'].iloc[i])
+            break
+    if hit_month:
+        lines.append(f"On track to double total followers by month {hit_month}.")
+    else:
+        shortfall = max(0, target - end_total)
+        progress = (end_total / target * 100) if target > 0 else 0
+        lines.append(f"Projected to reach {progress:.1f}% of the doubling goal; shortfall ~{shortfall:,.0f}.")
+
+    # 2) Platform contribution
+    contrib = []
+    for p in platforms:
+        start_p = float(cur_followers.get(p, 0))
+        end_p = float(monthly[p].iloc[-1]) if len(monthly) else start_p
+        contrib.append((p, max(0.0, end_p - start_p)))
+    contrib.sort(key=lambda x: x[1], reverse=True)
+    top = ", ".join([f"{p} {int(v):,}" for p, v in contrib[:3]])
+    lines.append(f"Top growth contributors: {top}.")
+
+    # 3) Posting plan diagnostics (oversaturation / under-posting)
+    alloc_frac = {p: max(platform_alloc.get(p, 0.0), 0.0) for p in platforms}
+    total_alloc = sum(alloc_frac.values()) or 1.0
+    alloc_frac = {p: v/total_alloc for p, v in alloc_frac.items()}
+    posts_breakdown = {p: posts_per_week_total * alloc_frac[p] for p in platforms}
+    issues = []
+    freq_cfg_map = st.session_state.get("_local_freq_map", RECOMMENDED_FREQ)
+    for p in platforms:
+        cfg = freq_cfg_map[p]
+        pw = posts_breakdown[p]
+        if pw < cfg['min']:
+            issues.append(f"{p}: below min ({pw:.1f}/wk < {cfg['min']}/wk)")
+        elif pw > cfg['hard']:
+            issues.append(f"{p}: over hard cap ({pw:.1f}/wk > {cfg['hard']}/wk)")
+        elif pw > cfg['soft']:
+            issues.append(f"{p}: over soft cap ({pw:.1f}/wk > {cfg['soft']}/wk)")
+    if issues:
+        lines.append("Posting cadence flags — " + "; ".join(issues) + ".")
+
+    # 4) Content mix diversity
+    def mix_hhi(mix: dict) -> float:
+        vals = np.array([max(mix.get(t, 0.0), 0.0) for t in POST_TYPES], dtype=float)
+        s = vals.sum() or 1.0
+        f = vals / s
+        return float((f**2).sum())
+    conc = []
+    for p in platforms:
+        h = mix_hhi(content_mix_by_platform.get(p, {}))
+        if h >= 0.85:
+            conc.append(f"{p}")
+    if conc:
+        lines.append("High format concentration detected on: " + ", ".join(conc) + ". Consider diversifying 1–2 slots.")
+
+    # 5) Engagement context and tags
+    ei_last8 = float(eng_df['engagement_index'].tail(8).mean()) if 'engagement_index' in eng_df else 0.0
+    if len(eng_df) >= 16:
+        ei_prev8 = float(eng_df['engagement_index'].tail(16).head(8).mean())
+        delta = ei_last8 - ei_prev8
+        trend = "up" if delta > 0.02 else ("down" if delta < -0.02 else "flat")
+        lines.append(f"Engagement trend: {trend} (last 8w avg {ei_last8:.2f}).")
+    else:
+        lines.append(f"Avg engagement index (last 8w): {ei_last8:.2f}.")
+    if 'Time' in tags_df.columns and len(tags_df.columns) > 1:
+        tag_cols = [c for c in tags_df.columns if c != 'Time']
+        latest = tags_df.sort_values('Time').tail(4)
+        sums = latest[tag_cols].apply(pd.to_numeric, errors='coerce').fillna(0).sum().sort_values(ascending=False)
+        top_tags = ", ".join(list(sums.head(3).index))
+        lines.append(f"Lean into recent tag pillars: {top_tags}.")
+
+    # 6) Action nudge based on goal gap
+    if not hit_month:
+        # conservative nudge suggestions
+        lines.append("Consider +15–25% posts/week and reweight toward high-yield formats (IG Carousels, TT Shorts, YT On‑Demand) while staying under soft caps.")
+
+    return "\n".join(lines)
+
+
 def forecast_growth(
     current_followers: dict,
     posts_per_week_total: float,
@@ -455,6 +551,39 @@ def main():
 
     with st.sidebar:
         st.header("Inputs")
+
+        with st.expander("Live Data (optional)"):
+            st.caption("Paste public CSV URLs to override local files. If your YouScan board is private, create a public export or Sheet and paste its link here.")
+            use_remote = st.checkbox("Use remote CSVs", value=False, key="use-remote")
+            rem_mentions = st.text_input("Mentions CSV URL", placeholder="https://.../generaldynamics.csv")
+            rem_sent = st.text_input("Sentiment CSV URL", placeholder="https://.../sentiment-dynamics.csv")
+            rem_tags = st.text_input("Tags CSV URL", placeholder="https://.../tags-dynamics.csv")
+            refresh = st.button("Fetch remote data now")
+
+            if use_remote and (refresh or (rem_mentions or rem_sent or rem_tags)):
+                def _load_remote(label, url):
+                    if not url:
+                        return None
+                    try:
+                        df = pd.read_csv(url)
+                        df.columns = [c.strip().strip('\ufeff').strip('"') for c in df.columns]
+                        if 'Time' in df.columns:
+                            df['Time'] = pd.to_datetime(df['Time'], errors='coerce', dayfirst=True)
+                        st.success(f"Loaded {label} from remote URL")
+                        return df
+                    except Exception as e:
+                        st.error(f"Failed to load {label}: {e}")
+                        return None
+
+                mdf = _load_remote('Mentions', rem_mentions)
+                sdf = _load_remote('Sentiment', rem_sent)
+                tdf = _load_remote('Tags', rem_tags)
+                if mdf is not None:
+                    mentions_df = mdf
+                if sdf is not None:
+                    sentiment_df = sdf
+                if tdf is not None:
+                    tags_df = tdf
 
         st.subheader("Current Followers")
         cur_followers = {}
@@ -733,20 +862,24 @@ def main():
 
     st.dataframe(monthly.style.format({**{p: '{:,.0f}' for p in PLATFORMS}, 'Total': '{:,.0f}', 'Added': '{:,.0f}'}), use_container_width=True)
 
-    # Simple heuristic recommendation
-    st.subheader("Recommendation")
-    rec_lines = []
-    if pct_to_goal < 100:
-        shortfall = goal - last_total
-        rec_lines.append(f"Shortfall to goal: {shortfall:,.0f} followers.")
-        rec_lines.append("Try: reweight toward high-yield formats per channel — IG Carousels, TikTok Short Video, YouTube On‑Demand; avoid oversaturation.")
-        # Suggest a nudge based on current plan
-        posts_reco = int(total_posts_week * 1.25) if total_posts_week < 100 else total_posts_week
-        rec_lines.append(f"Suggested posts/week: ~{posts_reco}.")
-        rec_lines.append("Content skew: TikTok Short Video +10 pts; IG Carousel +5 pts; YouTube Long Video +10 pts.")
-    else:
-        rec_lines.append("Plan meets or exceeds the doubling goal. Consider redistributing effort to strengthen weaker platforms while holding total output steady.")
-    st.write("\n".join(rec_lines))
+    # AI Insights — generate on first load and allow manual regenerate
+    st.subheader("AI Insights")
+    regen = st.button("Regenerate insights", help="Recompute insights based on current plan and data")
+    if regen or 'insights_text' not in st.session_state:
+        st.session_state['insights_text'] = generate_ai_insights(
+            monthly=monthly,
+            cur_followers=cur_followers,
+            platform_alloc=platform_alloc,
+            content_mix_by_platform=content_mix_by_platform,
+            posts_per_week_total=total_posts_week,
+            eng_df=eng_df,
+            tags_df=tags_df,
+        )
+        st.session_state['insights_updated'] = pd.Timestamp.utcnow()
+    st.write(st.session_state.get('insights_text', ''))
+    ts = st.session_state.get('insights_updated')
+    if ts is not None:
+        st.caption(f"Last updated: {ts.tz_localize('UTC').tz_convert('US/Pacific').strftime('%Y-%m-%d %H:%M %Z')}")
 
     # Export
     csv = monthly.to_csv(index=False).encode('utf-8')
