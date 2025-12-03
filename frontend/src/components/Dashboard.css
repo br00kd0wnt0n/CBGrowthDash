@@ -381,6 +381,8 @@
   margin-bottom: 0.5rem;
 }
 
+.nowrap { white-space: nowrap; }
+
 .metric-subtitle {
   font-size: 0.75rem;
   color: var(--text-secondary);

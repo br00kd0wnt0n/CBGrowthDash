@@ -767,7 +767,7 @@ export function Dashboard() {
                   </div>
                   <div className="metric-card">
                     <div className="metric-label">Paid vs Organic</div>
-                    <div className="metric-value">{paidPct.toFixed(0)}% / {orgPct.toFixed(0)}%</div>
+                    <div className="metric-value nowrap">{paidPct.toFixed(0)}% / {orgPct.toFixed(0)}%</div>
                     <div className="metric-subtitle">Paid / Organic</div>
                   </div>
                 </div>
