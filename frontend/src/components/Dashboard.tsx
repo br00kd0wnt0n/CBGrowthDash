@@ -505,6 +505,11 @@ export function Dashboard() {
                 </div>
                 <div className="control-group">
                   <label>Cost per Follower (range)</label>
+                  <div className="cpf-grid" style={{marginBottom:'6px', opacity:0.8, fontSize:'0.75rem', color:'var(--text-secondary)'}}>
+                    <div style={{textAlign:'center'}}>Min</div>
+                    <div style={{textAlign:'center'}}>Mid (used)</div>
+                    <div style={{textAlign:'center'}}>Max</div>
+                  </div>
                   <div className="cpf-grid">
                     <input type="number" step={0.1} value={cpfMin} onChange={e=>setCpfMin(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Min ($)" />
                     <input type="number" step={0.1} value={cpfMid} onChange={e=>setCpfMid(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Mid ($)" />

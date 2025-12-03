@@ -222,6 +222,7 @@
 .cpf-input {
   padding: 0.4rem 0.5rem;
   text-align: center;
+  width: 90px !important;
 }
 
 /* Platform Controls */
