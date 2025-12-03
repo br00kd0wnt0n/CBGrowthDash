@@ -606,6 +606,21 @@
   cursor: not-allowed;
 }
 
+/* Inline spinner for AI button */
+.btn-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--fountain-blue);
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: -2px;
+  animation: spin .8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
 .ai-results {
   margin-bottom: 1rem;
 }

@@ -374,6 +374,7 @@ export function Dashboard() {
               disabled={aiLoading}
               className="ai-button"
             >
+              {aiLoading && <span className="btn-spinner" />}
               {aiLoading ? 'Analyzing...' : '🔁 Regenerate Insights'}
             </button>
 
