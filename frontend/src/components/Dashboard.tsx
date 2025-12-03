@@ -72,6 +72,7 @@ export function Dashboard() {
   const [cpfMin, setCpfMin] = useState(3)
   const [cpfMid, setCpfMid] = useState(4)
   const [cpfMax, setCpfMax] = useState(5)
+  const [valuePerFollower, setValuePerFollower] = useState(0)
 
   // AI Insights state
   const [aiInsights, setAiInsights] = useState<AIInsightsResponse | null>(null)
@@ -88,6 +89,14 @@ export function Dashboard() {
   const goalFollowers = totalFollowers * 2 // Double in 12 months
   const projectedTotal = forecastResults?.projected_total || 0
   const progressPercent = goalFollowers > 0 ? (projectedTotal / goalFollowers) * 100 : 0
+
+  // ROI + CPF calculations
+  const weeksHorizon = months * 4
+  const weeklySpend = (enablePaid ? paidFunnelBudgetWeek : 0) + (enableBudget ? (paidBudgetWeek + creatorBudgetWeek + acquisitionBudgetWeek) : 0)
+  const totalSpend = weeklySpend * weeksHorizon
+  const totalAddedFollowers = forecastResults?.monthly_data.reduce((sum, m) => sum + (m.added || 0), 0) || 0
+  const blendedCPF = totalAddedFollowers > 0 ? totalSpend / totalAddedFollowers : 0
+  const estROI = (valuePerFollower > 0 && totalSpend > 0) ? ((totalAddedFollowers * valuePerFollower - totalSpend) / totalSpend) * 100 : null
 
   // Load historical data on mount
   useEffect(() => {
@@ -503,6 +512,11 @@ export function Dashboard() {
                   </div>
                   <div className="ai-note">Use ranges to frame outcomes rather than a single point prediction.</div>
                 </div>
+                <div className="control-group">
+                  <label>Value per New Follower (USD)</label>
+                  <input type="number" min={0} step={0.1} value={valuePerFollower} onChange={e=>setValuePerFollower(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="$ per follower" />
+                  <div className="ai-note">Used to estimate ROI at the top level.</div>
+                </div>
               </>
             )}
           </div>
@@ -646,9 +660,9 @@ export function Dashboard() {
               <div className="metric-subtitle">100% increase</div>
             </div>
             <div className="metric-card">
-              <div className="metric-label">Forecast Accuracy</div>
-              <div className="metric-value">{progressPercent >= 95 ? '✓' : '⚠'}</div>
-              <div className="metric-subtitle">{progressPercent >= 95 ? 'On track' : 'Needs adjustment'}</div>
+              <div className="metric-label">Est. ROI</div>
+              <div className="metric-value">{estROI !== null ? `${estROI.toFixed(0)}%` : '—'}</div>
+              <div className="metric-subtitle">CPF {blendedCPF > 0 ? `$${blendedCPF.toFixed(2)}` : '—'} | Spend ${(totalSpend/1000).toFixed(1)}k</div>
             </div>
           </div>
 
