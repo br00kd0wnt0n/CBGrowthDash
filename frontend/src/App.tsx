@@ -23,10 +23,10 @@ function App() {
           </div>
         </div>
         <div className="header-right">
-          <img src="/logo.png" alt="Ralph" className="logo-small" />
-          <div className={`status-badge ${status.online ? 'online' : 'offline'}`}>
+          <div className={`status-lockup ${status.online ? 'online' : 'offline'}`}>
+            <img src="/logo.png" alt="Ralph" className="lockup-logo" />
             <div className="status-indicator" />
-            <span>{status.online ? 'Connected' : 'Offline'}</span>
+            <span className="lockup-text">{status.online ? 'Connected' : 'Offline'}</span>
           </div>
         </div>
       </header>

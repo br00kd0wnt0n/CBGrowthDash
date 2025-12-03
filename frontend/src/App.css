@@ -204,6 +204,29 @@ h1 {
   border: 2px solid var(--border);
 }
 
+/* Combined Ralph logo + status pill */
+.status-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.75rem 0.35rem 0.35rem;
+  border-radius: 999px;
+  border: 2px solid var(--border);
+  background: var(--bg-secondary);
+}
+.status-lockup .lockup-logo {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 999px;
+  background: var(--bg-primary);
+  padding: 2px;
+}
+.status-lockup .lockup-text { font-weight: 700; font-size: 0.875rem; }
+.status-lockup .status-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--success); animation: pulse 2s ease-in-out infinite; }
+.status-lockup.online { border-color: var(--success); background: rgba(16,185,129,0.08); color: var(--success); }
+.status-lockup.offline { border-color: var(--secondary); background: rgba(255,110,97,0.08); color: var(--secondary); }
+
 .status-indicator {
   width: 8px;
   height: 8px;
