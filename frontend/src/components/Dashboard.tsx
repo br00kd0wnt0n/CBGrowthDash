@@ -511,15 +511,18 @@ export function Dashboard() {
                     <div style={{textAlign:'center'}}>Max</div>
                   </div>
                   <div className="cpf-grid">
-                    <input type="number" step={0.1} value={cpfMin} onChange={e=>setCpfMin(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Min ($)" />
-                    <input type="number" step={0.1} value={cpfMid} onChange={e=>setCpfMid(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Mid ($)" />
-                    <input type="number" step={0.1} value={cpfMax} onChange={e=>setCpfMax(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Max ($)" />
+                    <div className="input-prefix-group"><span className="prefix">$</span><input type="number" step={0.1} value={cpfMin} onChange={e=>setCpfMin(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Min" /></div>
+                    <div className="input-prefix-group"><span className="prefix">$</span><input type="number" step={0.1} value={cpfMid} onChange={e=>setCpfMid(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Mid" /></div>
+                    <div className="input-prefix-group"><span className="prefix">$</span><input type="number" step={0.1} value={cpfMax} onChange={e=>setCpfMax(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Max" /></div>
                   </div>
                   <div className="ai-note">Use ranges to frame outcomes rather than a single point prediction.</div>
                 </div>
                 <div className="control-group">
                   <label>Value per New Follower (USD)</label>
-                  <input type="number" min={0} step={0.1} value={valuePerFollower} onChange={e=>setValuePerFollower(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="$ per follower" />
+                  <div className="input-prefix-group">
+                    <span className="prefix">$</span>
+                    <input type="number" min={0} step={0.1} value={valuePerFollower} onChange={e=>setValuePerFollower(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="per follower" />
+                  </div>
                   <div className="ai-note">Used to estimate ROI at the top level.</div>
                 </div>
               </>
@@ -670,7 +673,7 @@ export function Dashboard() {
                 <HelpTooltip text={"ROI = (Added Followers × Value per New Follower − Spend) / Spend. Set Value per New Follower in Step 6 (Growth Strategy & Metrics)."} />
               </div>
               <div className="metric-value">{estROI !== null ? `${estROI.toFixed(0)}%` : '—'}</div>
-              <div className="metric-subtitle">CPF {blendedCPF > 0 ? `$${blendedCPF.toFixed(2)}` : '—'} | Spend ${(totalSpend/1000).toFixed(1)}k</div>
+              <div className="metric-subtitle">Mid CPF ${cpfMid.toFixed(2)} | Blended {blendedCPF > 0 ? `$${blendedCPF.toFixed(2)}` : '—'} | Spend ${(totalSpend/1000).toFixed(1)}k</div>
             </div>
           </div>
 

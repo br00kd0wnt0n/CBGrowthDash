@@ -225,6 +225,22 @@
   width: 90px !important;
 }
 
+/* Dollar prefix wrapper for compact inputs */
+.input-prefix-group {
+  position: relative;
+  display: inline-block;
+}
+.input-prefix-group .prefix {
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.input-prefix-group .cpf-input { padding-left: 1.1rem; text-align: right; }
+
 /* Platform Controls */
 .platform-control {
   margin-bottom: 1.5rem;
