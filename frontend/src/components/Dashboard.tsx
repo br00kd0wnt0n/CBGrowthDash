@@ -628,6 +628,111 @@ export function Dashboard() {
 
         {/* Right Panel: Visualizations */}
         <div className="viz-panel">
+          {/* At-a-glance KPIs */}
+          <div className="metrics-row" style={{marginBottom:'1rem'}}>
+            <div className="metric-card">
+              <div className="metric-label">Current Reach</div>
+              <div className="metric-value">{(totalFollowers / 1000000).toFixed(2)}M</div>
+              <div className="metric-subtitle">Across 4 platforms</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-label">Weekly Posts</div>
+              <div className="metric-value">{postsPerWeek}</div>
+              <div className="metric-subtitle">{(postsPerWeek * 4.33).toFixed(0)} per month</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-label">Growth Target</div>
+              <div className="metric-value">+{((goalFollowers - totalFollowers) / 1000000).toFixed(2)}M</div>
+              <div className="metric-subtitle">100% increase</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-label">Forecast Accuracy</div>
+              <div className="metric-value">{progressPercent >= 95 ? '✓' : '⚠'}</div>
+              <div className="metric-subtitle">{progressPercent >= 95 ? 'On track' : 'Needs adjustment'}</div>
+            </div>
+          </div>
+
+          {/* Historical context first */}
+          {historicalData && (
+            <div className="historical-section" style={{marginBottom:'1.25rem'}}>
+              <h3 className="section-header" style={{marginBottom:'0.75rem'}}>
+                Historical Context
+                <HelpTooltip text="Past performance data showing engagement trends, sentiment analysis, and popular tags over time" />
+              </h3>
+
+              <div className="historical-tabs">
+                <button
+                  className={`historical-tab ${historicalTab === 'mentions' ? 'active' : ''}`}
+                  onClick={() => setHistoricalTab('mentions')}
+                >
+                  Mentions
+                </button>
+                <button
+                  className={`historical-tab ${historicalTab === 'sentiment' ? 'active' : ''}`}
+                  onClick={() => setHistoricalTab('sentiment')}
+                >
+                  Sentiment
+                </button>
+                <button
+                  className={`historical-tab ${historicalTab === 'tags' ? 'active' : ''}`}
+                  onClick={() => setHistoricalTab('tags')}
+                >
+                  Tags
+                </button>
+              </div>
+
+              <div className="historical-chart-container">
+                {historicalTab === 'mentions' && (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={historicalData.mentions}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="Time" stroke="var(--text-secondary)" />
+                      <YAxis stroke="var(--text-secondary)" />
+                      <Tooltip
+                        contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
+                      />
+                      <Legend />
+                      <Line type="monotone" dataKey="Mentions" stroke={SERIES_COLORS.mentions} strokeWidth={2.5} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+
+                {historicalTab === 'sentiment' && (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={historicalData.sentiment}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="Time" stroke="var(--text-secondary)" />
+                      <YAxis stroke="var(--text-secondary)" />
+                      <Tooltip
+                        contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
+                      />
+                      <Legend />
+                      <Line type="monotone" dataKey="Positive" stroke={SERIES_COLORS.sentimentPos} strokeWidth={2.5} />
+                      <Line type="monotone" dataKey="Neutral" stroke={SERIES_COLORS.sentimentNeu} strokeWidth={2.5} />
+                      <Line type="monotone" dataKey="Negative" stroke={SERIES_COLORS.sentimentNeg} strokeWidth={2.5} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+
+                {historicalTab === 'tags' && (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={historicalData.tags}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="Time" stroke="var(--text-secondary)" />
+                      <YAxis stroke="var(--text-secondary)" />
+                      <Tooltip
+                        contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
+                      />
+                      <Legend />
+                      <Line type="monotone" dataKey="Official Care Bears" stroke={SERIES_COLORS.tag1} strokeWidth={2.5} name="Official Care Bears" />
+                      <Line type="monotone" dataKey="Stranger Things" stroke={SERIES_COLORS.tag2} strokeWidth={2.5} name="Stranger Things" />
+                      <Line type="monotone" dataKey="Wicked" stroke={SERIES_COLORS.tag3} strokeWidth={2.5} name="Wicked" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+          )}
           <div className="chart-container main-chart">
             <div className="chart-header">
               <h2>Growth Forecast - {months} Months</h2>
@@ -778,109 +883,7 @@ export function Dashboard() {
             </div>
           )}
 
-          <div className="metrics-row">
-            <div className="metric-card">
-              <div className="metric-label">Current Reach</div>
-              <div className="metric-value">{(totalFollowers / 1000000).toFixed(2)}M</div>
-              <div className="metric-subtitle">Across 4 platforms</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-label">Weekly Posts</div>
-              <div className="metric-value">{postsPerWeek}</div>
-              <div className="metric-subtitle">{(postsPerWeek * 4.33).toFixed(0)} per month</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-label">Growth Target</div>
-              <div className="metric-value">+{((goalFollowers - totalFollowers) / 1000000).toFixed(2)}M</div>
-              <div className="metric-subtitle">100% increase</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-label">Forecast Accuracy</div>
-              <div className="metric-value">{progressPercent >= 95 ? '✓' : '⚠'}</div>
-              <div className="metric-subtitle">{progressPercent >= 95 ? 'On track' : 'Needs adjustment'}</div>
-            </div>
-          </div>
-
-          {historicalData && (
-            <div className="historical-section">
-              <h3 className="section-header">
-                Historical Context
-                <HelpTooltip text="Past performance data showing engagement trends, sentiment analysis, and popular tags over time" />
-              </h3>
-
-              <div className="historical-tabs">
-                <button
-                  className={`historical-tab ${historicalTab === 'mentions' ? 'active' : ''}`}
-                  onClick={() => setHistoricalTab('mentions')}
-                >
-                  Mentions
-                </button>
-                <button
-                  className={`historical-tab ${historicalTab === 'sentiment' ? 'active' : ''}`}
-                  onClick={() => setHistoricalTab('sentiment')}
-                >
-                  Sentiment
-                </button>
-                <button
-                  className={`historical-tab ${historicalTab === 'tags' ? 'active' : ''}`}
-                  onClick={() => setHistoricalTab('tags')}
-                >
-                  Tags
-                </button>
-              </div>
-
-              <div className="historical-chart-container">
-                {historicalTab === 'mentions' && (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={historicalData.mentions}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                      <XAxis dataKey="Time" stroke="var(--text-secondary)" />
-                      <YAxis stroke="var(--text-secondary)" />
-                      <Tooltip
-                        contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
-                      />
-                      <Legend />
-                    <Line type="monotone" dataKey="Mentions" stroke={SERIES_COLORS.mentions} strokeWidth={2.5} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
-
-                {historicalTab === 'sentiment' && (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={historicalData.sentiment}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                      <XAxis dataKey="Time" stroke="var(--text-secondary)" />
-                      <YAxis stroke="var(--text-secondary)" />
-                      <Tooltip
-                        contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
-                      />
-                      <Legend />
-                      <Line type="monotone" dataKey="Positive" stroke={SERIES_COLORS.sentimentPos} strokeWidth={2.5} />
-                      <Line type="monotone" dataKey="Neutral" stroke={SERIES_COLORS.sentimentNeu} strokeWidth={2.5} />
-                      <Line type="monotone" dataKey="Negative" stroke={SERIES_COLORS.sentimentNeg} strokeWidth={2.5} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
-
-                {historicalTab === 'tags' && (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={historicalData.tags}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                      <XAxis dataKey="Time" stroke="var(--text-secondary)" />
-                      <YAxis stroke="var(--text-secondary)" />
-                      <Tooltip
-                        contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
-                      />
-                      <Legend />
-                      <Line type="monotone" dataKey="Official Care Bears" stroke={SERIES_COLORS.tag1} strokeWidth={2.5} name="Official Care Bears" />
-                      <Line type="monotone" dataKey="Stranger Things" stroke={SERIES_COLORS.tag2} strokeWidth={2.5} name="Stranger Things" />
-                      <Line type="monotone" dataKey="Wicked" stroke={SERIES_COLORS.tag3} strokeWidth={2.5} name="Wicked" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-            </div>
-          )}
+          
         </div>
       </div>
     </div>
