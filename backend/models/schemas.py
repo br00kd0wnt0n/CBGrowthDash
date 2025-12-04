@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 
 class ForecastRequest(BaseModel):
@@ -81,6 +81,41 @@ class ForecastResponse(BaseModel):
     progress_to_goal: float
     # Optional acquisition breakdown by month
     added_breakdown: Optional[List[dict]] = None
+
+
+# Insight API models
+class InsightRequest(BaseModel):
+    goal: float
+    projected_total: float
+    posts_per_week_total: float
+    platform_allocation: Dict[str, float]
+    months: int
+    progress_to_goal: float
+
+class InsightResponse(BaseModel):
+    insight: str
+
+
+# Assumptions API
+class AssumptionsResponse(BaseModel):
+    assumptions: List[Dict[str, Any]]
+
+
+# Parameter tuning API
+class ParamTuneRequest(BaseModel):
+    current_params: Dict[str, Any]
+    historical_summary: Dict[str, Any]
+    gap_to_goal: float
+
+class ParamSuggestion(BaseModel):
+    key: str
+    current: float
+    suggested: float
+    reason: str
+    confidence: str
+
+class ParamTuneResponse(BaseModel):
+    suggestions: List[ParamSuggestion]
 
 
 class HistoricalDataResponse(BaseModel):

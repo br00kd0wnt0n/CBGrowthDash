@@ -295,6 +295,53 @@ export function Dashboard() {
     }
   }
 
+  // Dynamic AI insight (single, contextual). Debounced refresh when >5% change.
+  const [aiInsight, setAiInsight] = useState<string>('')
+  const [aiLoadingCompact, setAiLoadingCompact] = useState(false)
+  const [lastInsightKey, setLastInsightKey] = useState<string>('')
+  // LLM Parameter Tuning modal state
+  const [showTune, setShowTune] = useState(false)
+  const [tuneLoading, setTuneLoading] = useState(false)
+  const [tuneSuggestions, setTuneSuggestions] = useState<{key:string; current:number; suggested:number; reason:string; confidence:string; accept?:boolean}[]>([])
+  useEffect(() => {
+    const keyObj = {
+      goal: goalFollowers,
+      projected_total: projectedTotal,
+      posts_per_week_total: postsPerWeek,
+      platform_allocation: platformAllocation,
+      months,
+    }
+    const key = JSON.stringify(keyObj)
+    const prev = lastInsightKey ? JSON.parse(lastInsightKey) : null
+    const pct = (a:number,b:number)=> b>0? Math.abs((a-b)/b)*100 : 0
+    const changedMeaningfully = prev ? pct(projectedTotal, prev.projected_total) > 5 : true
+    const timer = setTimeout(async () => {
+      if (!changedMeaningfully || key === lastInsightKey) return
+      setAiLoadingCompact(true)
+      try {
+        const cached = (window as any)._insightCache || {}
+        if (cached[key]) { setAiInsight(cached[key]); setAiLoadingCompact(false); setLastInsightKey(key); return }
+        const resp = await api.getAIInsight({
+          goal: goalFollowers,
+          projected_total: projectedTotal,
+          posts_per_week_total: postsPerWeek,
+          platform_allocation: platformAllocation,
+          months,
+          progress_to_goal: goalFollowers>0? (projectedTotal/goalFollowers)*100 : 0,
+        })
+        setAiInsight(resp.insight)
+        ;(window as any)._insightCache = { ...(window as any)._insightCache, [key]: resp.insight }
+        setLastInsightKey(key)
+      } catch (e) {
+        // ignore
+      } finally {
+        setAiLoadingCompact(false)
+      }
+    }, 2000)
+    return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectedTotal, postsPerWeek, platformAllocation, months, goalFollowers])
+
   const toggleScenario = (index: number) => {
     setScenarios(prev => prev.map((s, i) =>
       i === index ? { ...s, visible: !s.visible } : s
@@ -364,6 +411,34 @@ export function Dashboard() {
   const riskLevel = postsPerWeek > 35 ? 'HIGH' : postsPerWeek > 28 ? 'MEDIUM' : 'LOW'
   const riskColor = riskLevel === 'HIGH' ? 'var(--bittersweet)' : riskLevel === 'MEDIUM' ? 'var(--texas-rose)' : 'var(--fountain-blue)'
 
+  // Delta indicators: compare key metrics to previous values and show temporary delta pills
+  const [delta, setDelta] = useState<{ projected?: number; cpf?: number; spend?: number } | null>(null)
+  const [deltaKind, setDeltaKind] = useState<{ projected?: string; cpf?: string; spend?: string }>({})
+  useEffect(() => {
+    const win:any = window as any
+    const prev = win._prevForecast || { projected: 0, cpf: 0, spend: 0 }
+    const projected = projectedTotal
+    const cpf = blendedCPF
+    const spend = totalSpend
+    const pct = (a:number,b:number)=> b>0? ((a-b)/b)*100 : 0
+    const projDeltaPct = pct(projected, prev.projected)
+    const cpfDeltaPct = pct(cpf, prev.cpf)
+    const spendDeltaPct = pct(spend, prev.spend)
+    const meaningful = (v:number)=> Math.abs(v) > 0.5
+    const nextDelta:any = {}
+    const nextKind:any = {}
+    if (meaningful(projDeltaPct)) { nextDelta.projected = projected - prev.projected; nextKind.projected = projDeltaPct>0? 'positive':'negative' }
+    if (meaningful(cpfDeltaPct)) { nextDelta.cpf = cpf - prev.cpf; nextKind.cpf = cpfDeltaPct<0? 'positive':'negative' }
+    if (meaningful(spendDeltaPct)) { nextDelta.spend = spend - prev.spend; nextKind.spend = spendDeltaPct<0? 'positive':'negative' }
+    if (Object.keys(nextDelta).length>0) {
+      setDelta(nextDelta); setDeltaKind(nextKind)
+      const t = setTimeout(()=> setDelta(null), 3500)
+      return () => clearTimeout(t)
+    }
+    win._prevForecast = { projected, cpf, spend }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectedTotal, blendedCPF, totalSpend])
+
   return (
     <div className="unified-dashboard">
       {/* KPI Progress Bar */}
@@ -381,11 +456,29 @@ export function Dashboard() {
         <div className="kpi-section projected">
           <div className="kpi-label">PROJECTED</div>
           <div className="kpi-value">{(projectedTotal / 1000000).toFixed(2)}M</div>
+          {delta?.projected !== undefined && (
+            <div className={`delta-pill ${deltaKind.projected}`}>{delta.projected>0?'+':''}{(delta.projected/1000).toFixed(0)}k</div>
+          )}
           <div className="progress-badge" style={{
             background: progressPercent >= 95 ? 'var(--fountain-blue)' : progressPercent >= 80 ? 'var(--texas-rose)' : 'var(--bittersweet)'
           }}>
             {progressPercent.toFixed(0)}%
           </div>
+        </div>
+        <div className="kpi-separator"></div>
+        <div className="kpi-section">
+          <div className="kpi-label">EST. ROI</div>
+          <div className="kpi-value">{estROI !== null ? `${estROI.toFixed(0)}%` : '—'}</div>
+          {delta?.cpf !== undefined && (
+            <div className={`delta-pill ${deltaKind.cpf}`}>{delta.cpf>0?'+':'-'}${Math.abs(delta.cpf).toFixed(2)}</div>
+          )}
+        </div>
+        <div className="kpi-section">
+          <div className="kpi-label">TOTAL SPEND</div>
+          <div className="kpi-value">{(monthlySpend/1000).toFixed(1)}k</div>
+          {delta?.spend !== undefined && (
+            <div className={`delta-pill ${deltaKind.spend}`}>{delta.spend>0?'+':'-'}${(Math.abs(delta.spend)/1000).toFixed(1)}k</div>
+          )}
         </div>
       </div>
 
@@ -438,6 +531,22 @@ export function Dashboard() {
             </div>
           </div>
 
+          {/* Assumptions Panel */}
+          <div className="panel-section">
+            <h3 className="section-header">
+              Assumptions
+              <HelpTooltip text="Key model assumptions driving the forecast. Collapsed by default to keep the interface clean." />
+            </h3>
+            <details>
+              <summary style={{cursor:'pointer', color:'var(--text-secondary)'}}>Show assumptions</summary>
+              <Assumptions />
+              <div style={{marginTop:'0.75rem', display:'flex', gap:'8px'}}>
+                <button className="ai-button" onClick={() => setShowTune(true)}>
+                  ✨ AI Parameter Suggestions (beta)
+                </button>
+              </div>
+            </details>
+          </div>
           {/* Repositioned: Paid Media and Budget panels after Content Mix */}
           <div className="panel-section">
             <h3 className="section-header">
@@ -624,6 +733,17 @@ export function Dashboard() {
               <span className="step-badge">7</span> <span>🤖 AI Insights</span>
               <HelpTooltip text="Get AI-powered recommendations for 3 alternative strategies: Optimized, Aggressive, and Conservative" />
             </h3>
+            {/* Compact, dynamic insight based on current settings */}
+            <div style={{opacity: aiLoadingCompact? 0.6:1, transition:'opacity 0.2s'}}>
+              <div className="ai-analysis">{aiInsight || 'Adjust settings to see a contextual insight about your path to goal.'}</div>
+            </div>
+            <button
+              onClick={() => setLastInsightKey('')}
+              className="ai-button"
+              disabled={aiLoadingCompact}
+            >
+              ↻ Refresh Insight
+            </button>
             <button
               onClick={getAIRecommendations}
               disabled={aiLoading}
@@ -657,7 +777,7 @@ export function Dashboard() {
         {/* Right Panel: Visualizations */}
         <div className="viz-panel">
           {/* At-a-glance KPIs */}
-          <div className="metrics-row" style={{marginBottom:'1rem', gridTemplateColumns:'repeat(5, 1fr)'}}>
+          <div className="metrics-row" style={{marginBottom:'1rem', gridTemplateColumns:'repeat(3, 1fr)'}}>
             <div className="metric-card">
               <div className="metric-label">Current Reach</div>
               <div className="metric-value">{(totalFollowers / 1000000).toFixed(2)}M</div>
@@ -673,19 +793,7 @@ export function Dashboard() {
               <div className="metric-value">+{((goalFollowers - totalFollowers) / 1000000).toFixed(2)}M</div>
               <div className="metric-subtitle">100% increase</div>
             </div>
-            <div className="metric-card">
-              <div className="metric-label" style={{display:'flex', alignItems:'center', gap:'6px'}}>
-                Est. ROI
-                <HelpTooltip text={"ROI = (Added Followers × Value per New Follower − Spend) / Spend. Set Value per New Follower in Step 6 (Growth Strategy & Metrics)."} />
-              </div>
-              <div className="metric-value">{estROI !== null ? `${estROI.toFixed(0)}%` : '—'}</div>
-              <div className="metric-subtitle">Mid CPF ${cpfMid.toFixed(2)} | Blended {blendedCPF > 0 ? `$${blendedCPF.toFixed(2)}` : '—'} | Spend {(totalSpend/1000).toFixed(1)}k</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-label">Total Spend</div>
-              <div className="metric-value">${(monthlySpend/1000).toFixed(1)}k</div>
-              <div className="metric-subtitle">Monthly • Annual {annualDisplay}</div>
-            </div>
+            
           </div>
 
           {/* Historical context first */}
@@ -920,8 +1028,179 @@ export function Dashboard() {
           )}
 
           
+          {/* Parameter Tuning Modal */}
+          {showTune && (
+            <div className="modal-backdrop" role="dialog" aria-modal="true">
+              <div className="modal" style={{maxWidth:'760px'}}>
+                <div className="modal-header">
+                  <h2>AI Parameter Suggestions (beta)</h2>
+                  <button className="modal-close" aria-label="Close" onClick={()=>setShowTune(false)}>×</button>
+                </div>
+                <div className="modal-body">
+                  <p style={{marginTop:0, color:'var(--text-secondary)'}}>These are conservative, evidence-based tweaks to model assumptions. You control what to apply.</p>
+                  <div style={{marginBottom:'0.75rem'}}>
+                    <button
+                      className="ai-button"
+                      disabled={tuneLoading}
+                      onClick={async ()=>{
+                        setTuneLoading(true)
+                        try {
+                          const asmp = await api.getAssumptions()
+                          const find = (label:string)=> (asmp.assumptions as any[]).find((x:any)=> x.label.includes(label))
+                          const contentMult = find('Content multipliers')?.value || {}
+                          const bands = find('Posting bands')?.value || {}
+                          const ttAlloc = platformAllocation['TikTok'] || 0
+                          const weightedSoft = Object.entries(bands||{}).reduce((acc:any,[p,v]:any)=> acc + (platformAllocation[p as keyof typeof platformAllocation]||0)*(v.soft||0)/100, 0)
+                          const oversat_weeks = postsPerWeek > weightedSoft ? 6 : 0
+                          const tt_strength = Math.min(1, Math.max(0, (ttAlloc-25)/15))
+                          const resp = await api.tuneParameters({
+                            current_params: { CONTENT_MULT: contentMult, RECOMMENDED_FREQ: bands },
+                            historical_summary: { tt_strength, oversat_weeks },
+                            gap_to_goal: goalFollowers>0? Math.max(0, 100 - (projectedTotal/goalFollowers)*100): 100,
+                          })
+                          setTuneSuggestions(resp.suggestions.map(s=> ({...s, accept:true})))
+                        } catch(e) { /* ignore */ }
+                        finally { setTuneLoading(false) }
+                      }}
+                    >{tuneLoading? 'Getting suggestions…' : 'Get Suggestions'}</button>
+                  </div>
+                  {tuneSuggestions.length>0 ? (
+                    <div style={{overflowX:'auto'}}>
+                      <table style={{width:'100%', borderCollapse:'collapse'}}>
+                        <thead>
+                          <tr style={{textAlign:'left', color:'var(--text-secondary)'}}>
+                            <th style={{padding:'6px'}}>Apply</th>
+                            <th style={{padding:'6px'}}>Parameter</th>
+                            <th style={{padding:'6px'}}>Current</th>
+                            <th style={{padding:'6px'}}>Suggested</th>
+                            <th style={{padding:'6px'}}>Confidence</th>
+                            <th style={{padding:'6px'}}>Reason</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {tuneSuggestions.map((s,i)=>(
+                            <tr key={i} style={{borderTop:'1px solid var(--border)'}}>
+                              <td style={{padding:'6px'}}><input type="checkbox" checked={s.accept!==false} onChange={e=>{
+                                const v = e.target.checked; setTuneSuggestions(prev=> prev.map((x,idx)=> idx===i? {...x, accept:v}: x))
+                              }} /></td>
+                              <td style={{padding:'6px'}}><code>{s.key}</code></td>
+                              <td style={{padding:'6px'}}>{s.current}</td>
+                              <td style={{padding:'6px'}}>{s.suggested}</td>
+                              <td style={{padding:'6px'}}>{s.confidence}</td>
+                              <td style={{padding:'6px', color:'var(--text-secondary)'}}>{s.reason}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div style={{display:'flex', gap:'8px', marginTop:'0.75rem'}}>
+                        <button className="ai-button" onClick={()=> setShowTune(false)}>Dismiss</button>
+                        <button className="ai-button" onClick={()=> alert('Preview only: model overrides not yet applied in forecast engine.')}>Apply suggestions</button>
+                      </div>
+                      <p className="ai-note">Note: Applying suggestions is a preview in this build. We can wire overrides into the forecast engine upon approval.</p>
+                    </div>
+                  ) : (
+                    <p className="ai-note">Click “Get Suggestions” to retrieve conservative parameter tweaks based on current settings and benchmarks.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function Assumptions() {
+  const [items, setItems] = useState<{label:string, value:any, source:string}[]>([])
+  useEffect(() => {
+    api.getAssumptions().then(res => setItems(res.assumptions as any)).catch(()=>{})
+  }, [])
+  const renderItem = (a:any) => {
+    const label = a.label as string
+    const val = a.value
+    if (label.includes('Content multipliers')) {
+      const platforms = Object.keys(val||{})
+      const cols = ['Short Video','Image','Carousel','Long Video','Story/Live']
+      return (
+        <div className="assump-item">
+          <div className="assump-title">Content format multipliers</div>
+          <table className="assump-table">
+            <thead><tr><th>Platform</th>{cols.map(c=><th key={c}>{c}</th>)}</tr></thead>
+            <tbody>
+              {platforms.map(p=> (
+                <tr key={p}><td>{p}</td>{cols.map(c=> <td key={c}>{(val[p]?.[c] ?? 1).toFixed(2)}×</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="assump-source">Source: {a.source}</div>
+        </div>
+      )
+    }
+    if (label.includes('Posting bands')) {
+      const rows = Object.entries(val||{}) as any[]
+      return (
+        <div className="assump-item">
+          <div className="assump-title">Posting bands (per week)</div>
+          <div className="assump-kv">
+            {rows.map(([p,v])=> (
+              <div key={p}><span className="assump-badge">{p}</span>min {v.min}, ideal ≤ {v.max}, soft {v.soft}, hard {v.hard}/wk</div>
+            ))}
+          </div>
+          <div className="assump-source">Source: {a.source}</div>
+        </div>
+      )
+    }
+    if (label.includes('Frequency half-saturation')) {
+      const rows = Object.entries(val||{}) as any[]
+      return (
+        <div className="assump-item">
+          <div className="assump-title">Frequency half-saturation</div>
+          <div className="assump-kv">
+            {rows.map(([p,v])=> (
+              <div key={p}><span className="assump-badge">{p}</span>{v}/wk</div>
+            ))}
+          </div>
+          <div className="assump-source">Source: {a.source}</div>
+        </div>
+      )
+    }
+    if (label.includes('Monthly growth caps')) {
+      const rows = Object.entries(val||{}) as any[]
+      return (
+        <div className="assump-item">
+          <div className="assump-title">Monthly growth caps</div>
+          <div className="assump-kv">
+            {rows.map(([p,v])=> (
+              <div key={p}><span className="assump-badge">{p}</span>{(v*100).toFixed(0)}%</div>
+            ))}
+          </div>
+          <div className="assump-source">Source: {a.source}</div>
+        </div>
+      )
+    }
+    if (label.includes('CPF range')) {
+      return (
+        <div className="assump-item">
+          <div className="assump-title">Cost per follower (range)</div>
+          <div className="assump-kv">${val.min.toFixed(2)} – ${val.max.toFixed(2)} (using ${val.mid.toFixed(2)} midpoint)</div>
+          <div className="assump-source">Source: {a.source}</div>
+        </div>
+      )
+    }
+    return (
+      <div className="assump-item">
+        <div className="assump-title">{label}</div>
+        <div className="assump-kv">{typeof val === 'string' ? val : <code>{JSON.stringify(val)}</code>}</div>
+        <div className="assump-source">Source: {a.source}</div>
+      </div>
+    )
+  }
+  return (
+    <div className="assump-block">
+      {items.map((a, idx) => (
+        <div key={idx}>{renderItem(a)}</div>
+      ))}
     </div>
   )
 }
