@@ -1134,14 +1134,90 @@ function Assumptions() {
   useEffect(() => {
     api.getAssumptions().then(res => setItems(res.assumptions as any)).catch(()=>{})
   }, [])
-  return (
-    <div style={{marginTop:'0.75rem'}}>
-      {items.map((a, idx) => (
-        <div key={idx} style={{marginBottom:'0.75rem'}}>
-          <div style={{fontWeight:700, color:'var(--text-primary)'}}>{a.label}</div>
-          <div style={{fontSize:'0.85rem', color:'var(--text-secondary)'}}><code>{typeof a.value === 'string' ? a.value : JSON.stringify(a.value)}</code></div>
-          <div style={{fontSize:'0.75rem', color:'var(--text-secondary)'}}>Source: {a.source}</div>
+  const renderItem = (a:any) => {
+    const label = a.label as string
+    const val = a.value
+    if (label.includes('Content multipliers')) {
+      const platforms = Object.keys(val||{})
+      const cols = ['Short Video','Image','Carousel','Long Video','Story/Live']
+      return (
+        <div className="assump-item">
+          <div className="assump-title">Content format multipliers</div>
+          <table className="assump-table">
+            <thead><tr><th>Platform</th>{cols.map(c=><th key={c}>{c}</th>)}</tr></thead>
+            <tbody>
+              {platforms.map(p=> (
+                <tr key={p}><td>{p}</td>{cols.map(c=> <td key={c}>{(val[p]?.[c] ?? 1).toFixed(2)}×</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="assump-source">Source: {a.source}</div>
         </div>
+      )
+    }
+    if (label.includes('Posting bands')) {
+      const rows = Object.entries(val||{}) as any[]
+      return (
+        <div className="assump-item">
+          <div className="assump-title">Posting bands (per week)</div>
+          <div className="assump-kv">
+            {rows.map(([p,v])=> (
+              <div key={p}><span className="assump-badge">{p}</span>min {v.min}, ideal ≤ {v.max}, soft {v.soft}, hard {v.hard}/wk</div>
+            ))}
+          </div>
+          <div className="assump-source">Source: {a.source}</div>
+        </div>
+      )
+    }
+    if (label.includes('Frequency half-saturation')) {
+      const rows = Object.entries(val||{}) as any[]
+      return (
+        <div className="assump-item">
+          <div className="assump-title">Frequency half-saturation</div>
+          <div className="assump-kv">
+            {rows.map(([p,v])=> (
+              <div key={p}><span className="assump-badge">{p}</span>{v}/wk</div>
+            ))}
+          </div>
+          <div className="assump-source">Source: {a.source}</div>
+        </div>
+      )
+    }
+    if (label.includes('Monthly growth caps')) {
+      const rows = Object.entries(val||{}) as any[]
+      return (
+        <div className="assump-item">
+          <div className="assump-title">Monthly growth caps</div>
+          <div className="assump-kv">
+            {rows.map(([p,v])=> (
+              <div key={p}><span className="assump-badge">{p}</span>{(v*100).toFixed(0)}%</div>
+            ))}
+          </div>
+          <div className="assump-source">Source: {a.source}</div>
+        </div>
+      )
+    }
+    if (label.includes('CPF range')) {
+      return (
+        <div className="assump-item">
+          <div className="assump-title">Cost per follower (range)</div>
+          <div className="assump-kv">${val.min.toFixed(2)} – ${val.max.toFixed(2)} (using ${val.mid.toFixed(2)} midpoint)</div>
+          <div className="assump-source">Source: {a.source}</div>
+        </div>
+      )
+    }
+    return (
+      <div className="assump-item">
+        <div className="assump-title">{label}</div>
+        <div className="assump-kv">{typeof val === 'string' ? val : <code>{JSON.stringify(val)}</code>}</div>
+        <div className="assump-source">Source: {a.source}</div>
+      </div>
+    )
+  }
+  return (
+    <div className="assump-block">
+      {items.map((a, idx) => (
+        <div key={idx}>{renderItem(a)}</div>
       ))}
     </div>
   )

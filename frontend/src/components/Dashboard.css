@@ -400,6 +400,16 @@
 
 .nowrap { white-space: nowrap; }
 
+/* Assumptions panel */
+.assump-block { margin-top: 0.75rem; display: grid; gap: 12px; }
+.assump-item { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.assump-title { font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
+.assump-source { font-size: 0.75rem; color: var(--text-secondary); margin-top: 6px; }
+.assump-kv { font-size: 0.9rem; color: var(--text-secondary); }
+.assump-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.assump-table th, .assump-table td { padding: 6px 8px; border-top: 1px solid var(--border); text-align: left; }
+.assump-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--bg-tertiary); border: 1px solid var(--border); font-weight: 700; font-size: 0.75rem; margin-right: 6px; }
+
 /* Delta pill badges */
 .delta-pill {
   display: inline-flex;
