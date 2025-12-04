@@ -96,6 +96,10 @@ export function Dashboard() {
   const totalSpend = weeklySpend * weeksHorizon
   const weeksPerMonth = 4.33
   const monthlySpend = weeklySpend * weeksPerMonth
+  const annualSpend = weeklySpend * 52
+  const annualDisplay = annualSpend >= 1_000_000
+    ? `$${(annualSpend/1_000_000).toFixed(1)}M`
+    : `$${(annualSpend/1000).toFixed(1)}k`
   const totalAddedFollowers = forecastResults?.monthly_data.reduce((sum, m) => sum + (m.added || 0), 0) || 0
   const blendedCPF = totalAddedFollowers > 0 ? totalSpend / totalAddedFollowers : 0
   const estROI = (valuePerFollower > 0 && totalSpend > 0) ? ((totalAddedFollowers * valuePerFollower - totalSpend) / totalSpend) * 100 : null
@@ -471,7 +475,7 @@ export function Dashboard() {
         </div>
         <div className="kpi-section">
           <div className="kpi-label">TOTAL SPEND</div>
-          <div className="kpi-value">{(monthlySpend/1000).toFixed(1)}k</div>
+          <div className="kpi-value">{(monthlySpend/1000).toFixed(1)}k / {annualDisplay}</div>
           {delta?.spend !== undefined && (
             <div className={`delta-pill ${deltaKind.spend}`}>{delta.spend>0?'+':'-'}${(Math.abs(delta.spend)/1000).toFixed(1)}k</div>
           )}
