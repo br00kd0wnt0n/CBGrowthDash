@@ -777,7 +777,7 @@ export function Dashboard() {
         {/* Right Panel: Visualizations */}
         <div className="viz-panel">
           {/* At-a-glance KPIs */}
-          <div className="metrics-row" style={{marginBottom:'1rem', gridTemplateColumns:'repeat(5, 1fr)'}}>
+          <div className="metrics-row" style={{marginBottom:'1rem', gridTemplateColumns:'repeat(3, 1fr)'}}>
             <div className="metric-card">
               <div className="metric-label">Current Reach</div>
               <div className="metric-value">{(totalFollowers / 1000000).toFixed(2)}M</div>
@@ -793,25 +793,7 @@ export function Dashboard() {
               <div className="metric-value">+{((goalFollowers - totalFollowers) / 1000000).toFixed(2)}M</div>
               <div className="metric-subtitle">100% increase</div>
             </div>
-            <div className="metric-card">
-              <div className="metric-label" style={{display:'flex', alignItems:'center', gap:'6px'}}>
-                Est. ROI
-                <HelpTooltip text={"ROI = (Added Followers × Value per New Follower − Spend) / Spend. Set Value per New Follower in Step 6 (Growth Strategy & Metrics)."} />
-              </div>
-              <div className="metric-value">{estROI !== null ? `${estROI.toFixed(0)}%` : '—'}</div>
-              <div className="metric-subtitle">Mid CPF ${cpfMid.toFixed(2)} | Blended {blendedCPF > 0 ? `$${blendedCPF.toFixed(2)}` : '—'} | Spend {(totalSpend/1000).toFixed(1)}k</div>
-              {delta?.cpf !== undefined && (
-                <div className={`delta-pill ${deltaKind.cpf}`}>{delta.cpf>0?'+':'-'}${Math.abs(delta.cpf).toFixed(2)}</div>
-              )}
-            </div>
-            <div className="metric-card">
-              <div className="metric-label">Total Spend</div>
-              <div className="metric-value">${(monthlySpend/1000).toFixed(1)}k</div>
-              <div className="metric-subtitle">Monthly • Annual {annualDisplay}</div>
-              {delta?.spend !== undefined && (
-                <div className={`delta-pill ${deltaKind.spend}`}>{delta.spend>0?'+':'-'}${(Math.abs(delta.spend)/1000).toFixed(1)}k</div>
-              )}
-            </div>
+            
           </div>
 
           {/* Historical context first */}
