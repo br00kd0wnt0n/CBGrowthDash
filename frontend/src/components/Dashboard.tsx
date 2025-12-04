@@ -1046,90 +1046,86 @@ export function Dashboard() {
           )}
 
           
+          {/* Parameter Tuning Modal */}
+          {showTune && (
+            <div className="modal-backdrop" role="dialog" aria-modal="true">
+              <div className="modal" style={{maxWidth:'760px'}}>
+                <div className="modal-header">
+                  <h2>AI Parameter Suggestions (beta)</h2>
+                  <button className="modal-close" aria-label="Close" onClick={()=>setShowTune(false)}>×</button>
+                </div>
+                <div className="modal-body">
+                  <p style={{marginTop:0, color:'var(--text-secondary)'}}>These are conservative, evidence-based tweaks to model assumptions. You control what to apply.</p>
+                  <div style={{marginBottom:'0.75rem'}}>
+                    <button
+                      className="ai-button"
+                      disabled={tuneLoading}
+                      onClick={async ()=>{
+                        setTuneLoading(true)
+                        try {
+                          const asmp = await api.getAssumptions()
+                          const find = (label:string)=> (asmp.assumptions as any[]).find((x:any)=> x.label.includes(label))
+                          const contentMult = find('Content multipliers')?.value || {}
+                          const bands = find('Posting bands')?.value || {}
+                          const ttAlloc = platformAllocation['TikTok'] || 0
+                          const weightedSoft = Object.entries(bands||{}).reduce((acc:any,[p,v]:any)=> acc + (platformAllocation[p as keyof typeof platformAllocation]||0)*(v.soft||0)/100, 0)
+                          const oversat_weeks = postsPerWeek > weightedSoft ? 6 : 0
+                          const tt_strength = Math.min(1, Math.max(0, (ttAlloc-25)/15))
+                          const resp = await api.tuneParameters({
+                            current_params: { CONTENT_MULT: contentMult, RECOMMENDED_FREQ: bands },
+                            historical_summary: { tt_strength, oversat_weeks },
+                            gap_to_goal: goalFollowers>0? Math.max(0, 100 - (projectedTotal/goalFollowers)*100): 100,
+                          })
+                          setTuneSuggestions(resp.suggestions.map(s=> ({...s, accept:true})))
+                        } catch(e) { /* ignore */ }
+                        finally { setTuneLoading(false) }
+                      }}
+                    >{tuneLoading? 'Getting suggestions…' : 'Get Suggestions'}</button>
+                  </div>
+                  {tuneSuggestions.length>0 ? (
+                    <div style={{overflowX:'auto'}}>
+                      <table style={{width:'100%', borderCollapse:'collapse'}}>
+                        <thead>
+                          <tr style={{textAlign:'left', color:'var(--text-secondary)'}}>
+                            <th style={{padding:'6px'}}>Apply</th>
+                            <th style={{padding:'6px'}}>Parameter</th>
+                            <th style={{padding:'6px'}}>Current</th>
+                            <th style={{padding:'6px'}}>Suggested</th>
+                            <th style={{padding:'6px'}}>Confidence</th>
+                            <th style={{padding:'6px'}}>Reason</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {tuneSuggestions.map((s,i)=>(
+                            <tr key={i} style={{borderTop:'1px solid var(--border)'}}>
+                              <td style={{padding:'6px'}}><input type="checkbox" checked={s.accept!==false} onChange={e=>{
+                                const v = e.target.checked; setTuneSuggestions(prev=> prev.map((x,idx)=> idx===i? {...x, accept:v}: x))
+                              }} /></td>
+                              <td style={{padding:'6px'}}><code>{s.key}</code></td>
+                              <td style={{padding:'6px'}}>{s.current}</td>
+                              <td style={{padding:'6px'}}>{s.suggested}</td>
+                              <td style={{padding:'6px'}}>{s.confidence}</td>
+                              <td style={{padding:'6px', color:'var(--text-secondary)'}}>{s.reason}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div style={{display:'flex', gap:'8px', marginTop:'0.75rem'}}>
+                        <button className="ai-button" onClick={()=> setShowTune(false)}>Dismiss</button>
+                        <button className="ai-button" onClick={()=> alert('Preview only: model overrides not yet applied in forecast engine.')}>Apply suggestions</button>
+                      </div>
+                      <p className="ai-note">Note: Applying suggestions is a preview in this build. We can wire overrides into the forecast engine upon approval.</p>
+                    </div>
+                  ) : (
+                    <p className="ai-note">Click “Get Suggestions” to retrieve conservative parameter tweaks based on current settings and benchmarks.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
-
-    {/* Parameter Tuning Modal */}
-    {showTune && (
-      <div className="modal-backdrop" role="dialog" aria-modal="true">
-        <div className="modal" style={{maxWidth:'760px'}}>
-          <div className="modal-header">
-            <h2>AI Parameter Suggestions (beta)</h2>
-            <button className="modal-close" aria-label="Close" onClick={()=>setShowTune(false)}>×</button>
-          </div>
-          <div className="modal-body">
-            <p style={{marginTop:0, color:'var(--text-secondary)'}}>These are conservative, evidence-based tweaks to model assumptions. You control what to apply.</p>
-            <div style={{marginBottom:'0.75rem'}}>
-              <button
-                className="ai-button"
-                disabled={tuneLoading}
-                onClick={async ()=>{
-                  setTuneLoading(true)
-                  try {
-                    // Fetch current parameters from assumptions endpoint
-                    const asmp = await api.getAssumptions()
-                    // Build minimal current_params (CONTENT_MULT, RECOMMENDED_FREQ)
-                    const find = (label:string)=> (asmp.assumptions as any[]).find((x:any)=> x.label.includes(label))
-                    const contentMult = find('Content multipliers')?.value || {}
-                    const bands = find('Posting bands')?.value || {}
-                    // Heuristic historical summary
-                    const ttAlloc = platformAllocation['TikTok'] || 0
-                    const weightedSoft = Object.entries(bands||{}).reduce((acc:any,[p,v]:any)=> acc + (platformAllocation[p as keyof typeof platformAllocation]||0)*(v.soft||0)/100, 0)
-                    const oversat_weeks = postsPerWeek > weightedSoft ? 6 : 0
-                    const tt_strength = Math.min(1, Math.max(0, (ttAlloc-25)/15)) // >25% tilts up to 1
-                    const resp = await api.tuneParameters({
-                      current_params: { CONTENT_MULT: contentMult, RECOMMENDED_FREQ: bands },
-                      historical_summary: { tt_strength, oversat_weeks },
-                      gap_to_goal: goalFollowers>0? Math.max(0, 100 - (projectedTotal/goalFollowers)*100): 100,
-                    })
-                    setTuneSuggestions(resp.suggestions.map(s=> ({...s, accept:true})))
-                  } catch(e) { /* ignore */ }
-                  finally { setTuneLoading(false) }
-                }}
-              >{tuneLoading? 'Getting suggestions…' : 'Get Suggestions'}</button>
-            </div>
-            {tuneSuggestions.length>0 ? (
-              <div style={{overflowX:'auto'}}>
-                <table style={{width:'100%', borderCollapse:'collapse'}}>
-                  <thead>
-                    <tr style={{textAlign:'left', color:'var(--text-secondary)'}}>
-                      <th style={{padding:'6px'}}>Apply</th>
-                      <th style={{padding:'6px'}}>Parameter</th>
-                      <th style={{padding:'6px'}}>Current</th>
-                      <th style={{padding:'6px'}}>Suggested</th>
-                      <th style={{padding:'6px'}}>Confidence</th>
-                      <th style={{padding:'6px'}}>Reason</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tuneSuggestions.map((s,i)=>(
-                      <tr key={i} style={{borderTop:'1px solid var(--border)'}}>
-                        <td style={{padding:'6px'}}><input type="checkbox" checked={s.accept!==false} onChange={e=>{
-                          const v = e.target.checked; setTuneSuggestions(prev=> prev.map((x,idx)=> idx===i? {...x, accept:v}: x))
-                        }} /></td>
-                        <td style={{padding:'6px'}}><code>{s.key}</code></td>
-                        <td style={{padding:'6px'}}>{s.current}</td>
-                        <td style={{padding:'6px'}}>{s.suggested}</td>
-                        <td style={{padding:'6px'}}>{s.confidence}</td>
-                        <td style={{padding:'6px', color:'var(--text-secondary)'}}>{s.reason}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div style={{display:'flex', gap:'8px', marginTop:'0.75rem'}}>
-                  <button className="ai-button" onClick={()=> setShowTune(false)}>Dismiss</button>
-                  <button className="ai-button" onClick={()=> alert('Preview only: model overrides not yet applied in forecast engine.')}>Apply suggestions</button>
-                </div>
-                <p className="ai-note">Note: Applying suggestions is a preview in this build. We can wire overrides into the forecast engine upon approval.</p>
-              </div>
-            ) : (
-              <p className="ai-note">Click “Get Suggestions” to retrieve conservative parameter tweaks based on current settings and benchmarks.</p>
-            )}
-          </div>
-        </div>
-      </div>
-    )}
   )
 }
 
