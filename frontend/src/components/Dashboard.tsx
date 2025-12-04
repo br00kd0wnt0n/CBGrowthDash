@@ -96,7 +96,6 @@ export function Dashboard() {
   const totalSpend = weeklySpend * weeksHorizon
   const weeksPerMonth = 4.33
   const monthlySpend = weeklySpend * weeksPerMonth
-  const annualSpend = weeklySpend * 52
   const totalAddedFollowers = forecastResults?.monthly_data.reduce((sum, m) => sum + (m.added || 0), 0) || 0
   const blendedCPF = totalAddedFollowers > 0 ? totalSpend / totalAddedFollowers : 0
   const estROI = (valuePerFollower > 0 && totalSpend > 0) ? ((totalAddedFollowers * valuePerFollower - totalSpend) / totalSpend) * 100 : null
