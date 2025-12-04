@@ -295,6 +295,49 @@ export function Dashboard() {
     }
   }
 
+  // Dynamic AI insight (single, contextual). Debounced refresh when >5% change.
+  const [aiInsight, setAiInsight] = useState<string>('')
+  const [aiLoadingCompact, setAiLoadingCompact] = useState(false)
+  const [lastInsightKey, setLastInsightKey] = useState<string>('')
+  useEffect(() => {
+    const keyObj = {
+      goal: goalFollowers,
+      projected_total: projectedTotal,
+      posts_per_week_total: postsPerWeek,
+      platform_allocation: platformAllocation,
+      months,
+    }
+    const key = JSON.stringify(keyObj)
+    const prev = lastInsightKey ? JSON.parse(lastInsightKey) : null
+    const pct = (a:number,b:number)=> b>0? Math.abs((a-b)/b)*100 : 0
+    const changedMeaningfully = prev ? pct(projectedTotal, prev.projected_total) > 5 : true
+    const timer = setTimeout(async () => {
+      if (!changedMeaningfully || key === lastInsightKey) return
+      setAiLoadingCompact(true)
+      try {
+        const cached = (window as any)._insightCache || {}
+        if (cached[key]) { setAiInsight(cached[key]); setAiLoadingCompact(false); setLastInsightKey(key); return }
+        const resp = await api.getAIInsight({
+          goal: goalFollowers,
+          projected_total: projectedTotal,
+          posts_per_week_total: postsPerWeek,
+          platform_allocation: platformAllocation,
+          months,
+          progress_to_goal: goalFollowers>0? (projectedTotal/goalFollowers)*100 : 0,
+        })
+        setAiInsight(resp.insight)
+        ;(window as any)._insightCache = { ...(window as any)._insightCache, [key]: resp.insight }
+        setLastInsightKey(key)
+      } catch (e) {
+        // ignore
+      } finally {
+        setAiLoadingCompact(false)
+      }
+    }, 2000)
+    return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectedTotal, postsPerWeek, platformAllocation, months, goalFollowers])
+
   const toggleScenario = (index: number) => {
     setScenarios(prev => prev.map((s, i) =>
       i === index ? { ...s, visible: !s.visible } : s
@@ -364,6 +407,34 @@ export function Dashboard() {
   const riskLevel = postsPerWeek > 35 ? 'HIGH' : postsPerWeek > 28 ? 'MEDIUM' : 'LOW'
   const riskColor = riskLevel === 'HIGH' ? 'var(--bittersweet)' : riskLevel === 'MEDIUM' ? 'var(--texas-rose)' : 'var(--fountain-blue)'
 
+  // Delta indicators: compare key metrics to previous values and show temporary delta pills
+  const [delta, setDelta] = useState<{ projected?: number; cpf?: number; spend?: number } | null>(null)
+  const [deltaKind, setDeltaKind] = useState<{ projected?: string; cpf?: string; spend?: string }>({})
+  useEffect(() => {
+    const win:any = window as any
+    const prev = win._prevForecast || { projected: 0, cpf: 0, spend: 0 }
+    const projected = projectedTotal
+    const cpf = blendedCPF
+    const spend = totalSpend
+    const pct = (a:number,b:number)=> b>0? ((a-b)/b)*100 : 0
+    const projDeltaPct = pct(projected, prev.projected)
+    const cpfDeltaPct = pct(cpf, prev.cpf)
+    const spendDeltaPct = pct(spend, prev.spend)
+    const meaningful = (v:number)=> Math.abs(v) > 0.5
+    const nextDelta:any = {}
+    const nextKind:any = {}
+    if (meaningful(projDeltaPct)) { nextDelta.projected = projected - prev.projected; nextKind.projected = projDeltaPct>0? 'positive':'negative' }
+    if (meaningful(cpfDeltaPct)) { nextDelta.cpf = cpf - prev.cpf; nextKind.cpf = cpfDeltaPct<0? 'positive':'negative' }
+    if (meaningful(spendDeltaPct)) { nextDelta.spend = spend - prev.spend; nextKind.spend = spendDeltaPct<0? 'positive':'negative' }
+    if (Object.keys(nextDelta).length>0) {
+      setDelta(nextDelta); setDeltaKind(nextKind)
+      const t = setTimeout(()=> setDelta(null), 3500)
+      return () => clearTimeout(t)
+    }
+    win._prevForecast = { projected, cpf, spend }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectedTotal, blendedCPF, totalSpend])
+
   return (
     <div className="unified-dashboard">
       {/* KPI Progress Bar */}
@@ -381,6 +452,9 @@ export function Dashboard() {
         <div className="kpi-section projected">
           <div className="kpi-label">PROJECTED</div>
           <div className="kpi-value">{(projectedTotal / 1000000).toFixed(2)}M</div>
+          {delta?.projected !== undefined && (
+            <div className={`delta-pill ${deltaKind.projected}`}>{delta.projected>0?'+':''}{(delta.projected/1000).toFixed(0)}k</div>
+          )}
           <div className="progress-badge" style={{
             background: progressPercent >= 95 ? 'var(--fountain-blue)' : progressPercent >= 80 ? 'var(--texas-rose)' : 'var(--bittersweet)'
           }}>
@@ -438,6 +512,17 @@ export function Dashboard() {
             </div>
           </div>
 
+          {/* Assumptions Panel */}
+          <div className="panel-section">
+            <h3 className="section-header">
+              Assumptions
+              <HelpTooltip text="Key model assumptions driving the forecast. Collapsed by default to keep the interface clean." />
+            </h3>
+            <details>
+              <summary style={{cursor:'pointer', color:'var(--text-secondary)'}}>Show assumptions</summary>
+              <Assumptions />
+            </details>
+          </div>
           {/* Repositioned: Paid Media and Budget panels after Content Mix */}
           <div className="panel-section">
             <h3 className="section-header">
@@ -624,6 +709,17 @@ export function Dashboard() {
               <span className="step-badge">7</span> <span>🤖 AI Insights</span>
               <HelpTooltip text="Get AI-powered recommendations for 3 alternative strategies: Optimized, Aggressive, and Conservative" />
             </h3>
+            {/* Compact, dynamic insight based on current settings */}
+            <div style={{opacity: aiLoadingCompact? 0.6:1, transition:'opacity 0.2s'}}>
+              <div className="ai-analysis">{aiInsight || 'Adjust settings to see a contextual insight about your path to goal.'}</div>
+            </div>
+            <button
+              onClick={() => setLastInsightKey('')}
+              className="ai-button"
+              disabled={aiLoadingCompact}
+            >
+              ↻ Refresh Insight
+            </button>
             <button
               onClick={getAIRecommendations}
               disabled={aiLoading}
@@ -680,11 +776,17 @@ export function Dashboard() {
               </div>
               <div className="metric-value">{estROI !== null ? `${estROI.toFixed(0)}%` : '—'}</div>
               <div className="metric-subtitle">Mid CPF ${cpfMid.toFixed(2)} | Blended {blendedCPF > 0 ? `$${blendedCPF.toFixed(2)}` : '—'} | Spend {(totalSpend/1000).toFixed(1)}k</div>
+              {delta?.cpf !== undefined && (
+                <div className={`delta-pill ${deltaKind.cpf}`}>{delta.cpf>0?'+':'-'}${Math.abs(delta.cpf).toFixed(2)}</div>
+              )}
             </div>
             <div className="metric-card">
               <div className="metric-label">Total Spend</div>
               <div className="metric-value">${(monthlySpend/1000).toFixed(1)}k</div>
               <div className="metric-subtitle">Monthly • Annual {annualDisplay}</div>
+              {delta?.spend !== undefined && (
+                <div className={`delta-pill ${deltaKind.spend}`}>{delta.spend>0?'+':'-'}${(Math.abs(delta.spend)/1000).toFixed(1)}k</div>
+              )}
             </div>
           </div>
 
@@ -922,6 +1024,24 @@ export function Dashboard() {
           
         </div>
       </div>
+    </div>
+  )
+}
+
+function Assumptions() {
+  const [items, setItems] = useState<{label:string, value:any, source:string}[]>([])
+  useEffect(() => {
+    api.getAssumptions().then(res => setItems(res.assumptions as any)).catch(()=>{})
+  }, [])
+  return (
+    <div style={{marginTop:'0.75rem'}}>
+      {items.map((a, idx) => (
+        <div key={idx} style={{marginBottom:'0.75rem'}}>
+          <div style={{fontWeight:700, color:'var(--text-primary)'}}>{a.label}</div>
+          <div style={{fontSize:'0.85rem', color:'var(--text-secondary)'}}><code>{typeof a.value === 'string' ? a.value : JSON.stringify(a.value)}</code></div>
+          <div style={{fontSize:'0.75rem', color:'var(--text-secondary)'}}>Source: {a.source}</div>
+        </div>
+      ))}
     </div>
   )
 }

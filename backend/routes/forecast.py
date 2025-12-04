@@ -13,7 +13,11 @@ from services.forecast_service import (
     load_historical_data,
     compute_engagement_index,
     PRESETS,
-    PLATFORMS
+    PLATFORMS,
+    CONTENT_MULT,
+    FREQ_HALF_SAT,
+    RECOMMENDED_FREQ,
+    PLATFORM_MONTHLY_CAP
 )
 
 router = APIRouter(prefix="/api", tags=["forecast"])
@@ -28,6 +32,34 @@ async def get_historical_data():
     try:
         data = load_historical_data(DATA_DIR)
         return HistoricalDataResponse(**data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/assumptions", response_model=HistoricalDataResponse, include_in_schema=False)
+async def assumptions_hidden():
+    # kept to avoid breaking schema generation; real endpoint below
+    return HistoricalDataResponse(mentions=[], sentiment=[], tags=[], engagement_index=[])
+
+
+@router.get("/assumptions-plain")
+async def get_assumptions_plain():
+    try:
+        assumptions = [
+            {"label": "Content multipliers (examples)", "value": {
+                "Instagram": CONTENT_MULT['Instagram'],
+                "TikTok": CONTENT_MULT['TikTok'],
+                "YouTube": CONTENT_MULT['YouTube'],
+                "Facebook": CONTENT_MULT['Facebook'],
+            }, "source": "industry + cross-channel trends"},
+            {"label": "Frequency half-saturation (posts/week)", "value": FREQ_HALF_SAT, "source": "benchmark"},
+            {"label": "Posting bands (min/ideal/soft/hard)", "value": RECOMMENDED_FREQ, "source": "benchmark"},
+            {"label": "Monthly growth caps", "value": PLATFORM_MONTHLY_CAP, "source": "realistic upper bounds"},
+            {"label": "CPF range", "value": {"min": 3.0, "mid": 4.0, "max": 5.0}, "source": "industry"},
+            {"label": "Oversaturation penalty", "value": "-40% effectiveness from soft to hard cap", "source": "model"},
+            {"label": "Compounding growth", "value": "Platform baselines compounded weekly", "source": "model"},
+        ]
+        return {"assumptions": assumptions}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

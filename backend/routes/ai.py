@@ -3,8 +3,8 @@ AI Insights API Routes
 """
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
-from models.schemas import ForecastRequest, AIInsightsResponse, AIScenario
-from services.ai_service import analyze_strategy
+from models.schemas import ForecastRequest, AIInsightsResponse, AIScenario, InsightRequest, InsightResponse, ParamTuneRequest, ParamTuneResponse
+from services.ai_service import analyze_strategy, generate_gap_insight, tune_parameters
 from services.forecast_service import load_historical_data
 
 router = APIRouter(prefix="/api", tags=["AI Insights"])
@@ -51,3 +51,21 @@ async def get_ai_insights(request: ForecastRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI analysis failed: {str(e)}")
+
+
+@router.post("/ai/insight", response_model=InsightResponse)
+async def ai_gap_insight(req: InsightRequest):
+    try:
+        text = generate_gap_insight(req)
+        return InsightResponse(insight=text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Insight generation failed: {e}")
+
+
+@router.post("/ai/tune-parameters", response_model=ParamTuneResponse)
+async def ai_tune_parameters(req: ParamTuneRequest):
+    try:
+        resp = tune_parameters(req)
+        return ParamTuneResponse(**resp)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Parameter tuning failed: {e}")

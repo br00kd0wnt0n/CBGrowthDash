@@ -68,6 +68,11 @@ export interface AIInsightsResponse {
   key_insights: string[];
 }
 
+export interface InsightResponse { insight: string }
+export interface AssumptionsPayload { assumptions: any[] }
+export interface ParamSuggestion { key: string; current: number; suggested: number; reason: string; confidence: string }
+export interface ParamTuneResponse { suggestions: ParamSuggestion[] }
+
 export const api = {
   getHistoricalData: () => request<HistoricalDataResponse>('/api/historical'),
   runForecast: (data: ForecastRequest) => request<ForecastResponse>('/api/forecast', {
@@ -76,6 +81,17 @@ export const api = {
     body: JSON.stringify(data),
   }),
   getAIInsights: (data: ForecastRequest) => request<AIInsightsResponse>('/api/ai-insights', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }),
+  getAIInsight: (data: any) => request<InsightResponse>('/api/ai/insight', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }),
+  getAssumptions: () => request<AssumptionsPayload>('/api/assumptions-plain'),
+  tuneParameters: (data: any) => request<ParamTuneResponse>('/api/ai/tune-parameters', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
