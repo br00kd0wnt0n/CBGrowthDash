@@ -461,6 +461,21 @@ export function Dashboard() {
             {progressPercent.toFixed(0)}%
           </div>
         </div>
+        <div className="kpi-separator"></div>
+        <div className="kpi-section">
+          <div className="kpi-label">EST. ROI</div>
+          <div className="kpi-value">{estROI !== null ? `${estROI.toFixed(0)}%` : '—'}</div>
+          {delta?.cpf !== undefined && (
+            <div className={`delta-pill ${deltaKind.cpf}`}>{delta.cpf>0?'+':'-'}${Math.abs(delta.cpf).toFixed(2)}</div>
+          )}
+        </div>
+        <div className="kpi-section">
+          <div className="kpi-label">TOTAL SPEND</div>
+          <div className="kpi-value">{(monthlySpend/1000).toFixed(1)}k</div>
+          {delta?.spend !== undefined && (
+            <div className={`delta-pill ${deltaKind.spend}`}>{delta.spend>0?'+':'-'}${(Math.abs(delta.spend)/1000).toFixed(1)}k</div>
+          )}
+        </div>
       </div>
 
       {/* Main Content Grid */}
