@@ -132,7 +132,13 @@ export function Dashboard() {
   useEffect(() => {
     loadHistoricalData()
     // Load follower history (from workbook) for unified chart if available
-    api.getFollowersHistory().then(res=> setFollowerHistory(res.data || null)).catch(()=> setFollowerHistory(null))
+    api.getFollowersHistory().then(res=> {
+      console.log('Follower history loaded:', res.data?.length, 'rows')
+      setFollowerHistory(res.data || null)
+    }).catch(err => {
+      console.error('Failed to load follower history:', err)
+      setFollowerHistory(null)
+    })
     runForecast() // Initial forecast
     // Auto-generate AI insights on first load
     getAIRecommendations()
