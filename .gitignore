@@ -6,8 +6,11 @@ __pycache__/
 *.pyd
 *.swp
 *.swo
+node_modules/
+**/node_modules/
+frontend/.vite/
 env/
 venv/
 .env
-.python-version
+# .python-version - now tracked for Railway deployment
 *.sqlite
