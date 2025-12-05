@@ -17,8 +17,13 @@ from services.forecast_service import (
     CONTENT_MULT,
     FREQ_HALF_SAT,
     RECOMMENDED_FREQ,
-    PLATFORM_MONTHLY_CAP
+    PLATFORM_MONTHLY_CAP,
+    BASE_MONTHLY_RATE,
+    PER_POST_GAIN_BASE,
+    PAID_FUNNEL_DEFAULT,
+    CPF_DEFAULT,
 )
+from services.calibration import load_calibration_from_xlsx, load_follower_history_from_xlsx
 
 router = APIRouter(prefix="/api", tags=["forecast"])
 
@@ -64,6 +69,70 @@ async def get_assumptions_plain():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/followers-history")
+async def followers_history(sheet_path: str | None = None):
+    """Return historical follower series parsed from the workbook.
+    Uses the public workbook by default ("Care Bears Audience Growth KPis .xlsx").
+    """
+    try:
+        wb = Path(sheet_path) if sheet_path else (Path(__file__).resolve().parents[2] / 'public' / 'Care Bears Audience Growth KPis .xlsx')
+        if not wb.exists():
+            return {"labels": [], "data": []}
+        payload = load_follower_history_from_xlsx(wb)
+        return payload
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/assumptions-calibrated")
+async def get_assumptions_calibrated(use_sheet_calibration: bool = False, sheet_path: str | None = None):
+    """Return effective assumptions after optional sheet calibration, with sources."""
+    try:
+        effective_bmr = BASE_MONTHLY_RATE.copy()
+        effective_cap = PLATFORM_MONTHLY_CAP.copy()
+        effective_ppg = PER_POST_GAIN_BASE.copy()
+        effective_cmult = CONTENT_MULT.copy()
+        effective_cpf_paid = CPF_DEFAULT.copy()
+        effective_cpf_creator = CPF_DEFAULT.copy()
+        seasonality = 0.0
+        wb_used = None
+
+        if use_sheet_calibration:
+            wb = Path(sheet_path) if sheet_path else (Path(__file__).resolve().parents[2] / 'public' / 'Care Bears Audience Growth KPis .xlsx')
+            if wb.exists():
+                wb_used = str(wb)
+                calib = load_calibration_from_xlsx(wb)
+                if calib.get('base_monthly_rate'):
+                    effective_bmr.update(calib['base_monthly_rate'])
+                if calib.get('platform_monthly_cap'):
+                    effective_cap.update(calib['platform_monthly_cap'])
+                if calib.get('per_post_gain_base'):
+                    effective_ppg.update(calib['per_post_gain_base'])
+                if calib.get('cpf_paid'):
+                    effective_cpf_paid = calib['cpf_paid']
+                if calib.get('cpf_creator'):
+                    effective_cpf_creator = calib['cpf_creator']
+                seasonality = float(calib.get('month_decay_per_month') or 0.0)
+
+        assumptions = [
+            {"label": "Baseline monthly rate (BMR)", "value": effective_bmr, "source": "sheet+default" if use_sheet_calibration else "default"},
+            {"label": "Monthly caps", "value": effective_cap, "source": "sheet+default" if use_sheet_calibration else "default"},
+            {"label": "Per-post gain base", "value": effective_ppg, "source": "sheet+default" if use_sheet_calibration else "default"},
+            {"label": "Content multipliers", "value": effective_cmult, "source": "default"},
+            {"label": "Frequency half-saturation", "value": FREQ_HALF_SAT, "source": "default"},
+            {"label": "Posting bands", "value": RECOMMENDED_FREQ, "source": "default"},
+            {"label": "Paid funnel default", "value": PAID_FUNNEL_DEFAULT, "source": "default"},
+            {"label": "CPF paid", "value": effective_cpf_paid, "source": "sheet or request override where set"},
+            {"label": "CPF creator", "value": effective_cpf_creator, "source": "sheet or request override where set"},
+            {"label": "Seasonality taper per month", "value": seasonality, "source": "sheet (fixed 0.02) or 0.0"},
+        ]
+        if wb_used:
+            assumptions.append({"label": "Workbook path", "value": wb_used, "source": "sheet"})
+        return {"assumptions": assumptions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/forecast", response_model=ForecastResponse)
 async def run_forecast(request: ForecastRequest):
     """Run growth forecast based on input parameters"""
@@ -85,6 +154,29 @@ async def run_forecast(request: ForecastRequest):
         # Compute engagement index
         eng_index = compute_engagement_index(mentions_df, sentiment_df)
 
+        # Optional: sheet-driven calibration
+        base_monthly_rate = None
+        platform_monthly_cap = None
+        per_post_gain_base = None
+        paid_funnel = request.paid_funnel or None
+        cpf_paid = request.cpf_paid or None
+        cpf_creator = request.cpf_creator or None
+        cpf_acquisition = request.cpf_acquisition or None
+        month_decay_per_month = 0.0
+
+        if request.use_sheet_calibration:
+            wb_path = Path(request.sheet_path) if request.sheet_path else (Path(__file__).resolve().parents[2] / 'public' / 'Care Bears Audience Growth KPis .xlsx')
+            if wb_path.exists():
+                calib = load_calibration_from_xlsx(wb_path)
+                base_monthly_rate = calib.get('base_monthly_rate') or None
+                platform_monthly_cap = calib.get('platform_monthly_cap') or None
+                per_post_gain_base = calib.get('per_post_gain_base') or None
+                # Allow CPF overrides if not provided by request
+                cpf_paid = cpf_paid or calib.get('cpf_paid') or None
+                cpf_creator = cpf_creator or calib.get('cpf_creator') or None
+                # Seasonality taper
+                month_decay_per_month = float(calib.get('month_decay_per_month') or 0.0)
+
         # Run forecast
         monthly_df = forecast_growth(
             current_followers=request.current_followers,
@@ -98,13 +190,17 @@ async def run_forecast(request: ForecastRequest):
             acq_scalar=preset_cfg["acq_scalar"],
             paid_impressions_per_week_total=(request.paid_impressions_per_week_total or 0.0),
             paid_allocation=(request.paid_allocation or None),
-            paid_funnel=(request.paid_funnel or None),
+            paid_funnel=(paid_funnel or None),
             paid_budget_per_week_total=(request.paid_budget_per_week_total or 0.0),
             creator_budget_per_week_total=(request.creator_budget_per_week_total or 0.0),
             acquisition_budget_per_week_total=(request.acquisition_budget_per_week_total or 0.0),
-            cpf_paid=(request.cpf_paid or None),
-            cpf_creator=(request.cpf_creator or None),
-            cpf_acquisition=(request.cpf_acquisition or None),
+            cpf_paid=(cpf_paid or None),
+            cpf_creator=(cpf_creator or None),
+            cpf_acquisition=(cpf_acquisition or None),
+            base_monthly_rate=base_monthly_rate,
+            platform_monthly_cap=platform_monthly_cap,
+            per_post_gain_base=per_post_gain_base,
+            month_decay_per_month=month_decay_per_month,
         )
 
         # Convert to response format

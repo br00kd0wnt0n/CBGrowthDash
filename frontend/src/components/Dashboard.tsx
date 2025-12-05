@@ -82,8 +82,21 @@ export function Dashboard() {
   // Confidence band totals (per month)
   const [bandHigh, setBandHigh] = useState<number[] | null>(null) // optimistic (CPF min)
   const [bandLow, setBandLow] = useState<number[] | null>(null)   // pessimistic (CPF max)
+  // Followers history for combined chart and mode toggle
+  const [followerHistory, setFollowerHistory] = useState<any[] | null>(null)
+  const [chartMode, setChartMode] = useState<'historical'|'forecast'|'both'>('both')
+  // Platform visibility toggles
+  const [showPlatforms, setShowPlatforms] = useState<{Total:boolean; Instagram:boolean; TikTok:boolean; YouTube:boolean; Facebook:boolean}>({
+    Total: true,
+    Instagram: true,
+    TikTok: true,
+    YouTube: true,
+    Facebook: true,
+  })
   // Month selector for acquisition breakdown
   const [selectedBreakdownIndex, setSelectedBreakdownIndex] = useState<number>(0)
+  // Collapsible sections
+  const [historicalCollapsed, setHistoricalCollapsed] = useState<boolean>(false)
 
   const totalFollowers = Object.values(currentFollowers).reduce((a, b) => a + b, 0)
   const goalFollowers = totalFollowers * 2 // Double in 12 months
@@ -107,6 +120,8 @@ export function Dashboard() {
   // Load historical data on mount
   useEffect(() => {
     loadHistoricalData()
+    // Load follower history (from workbook) for unified chart if available
+    api.getFollowersHistory().then(res=> setFollowerHistory(res.data || null)).catch(()=> setFollowerHistory(null))
     runForecast() // Initial forecast
     // Auto-generate AI insights on first load
     getAIRecommendations()
@@ -380,6 +395,9 @@ export function Dashboard() {
 
     if (bandHigh && bandHigh[idx] !== undefined) dataPoint.BandHigh = Math.round(bandHigh[idx])
     if (bandLow && bandLow[idx] !== undefined) dataPoint.BandLow = Math.round(bandLow[idx])
+    if (dataPoint.BandHigh !== undefined && dataPoint.BandLow !== undefined) {
+      dataPoint.BandDelta = dataPoint.BandHigh - dataPoint.BandLow
+    }
 
     // Add visible scenario lines
     scenarios.forEach(scenario => {
@@ -480,6 +498,21 @@ export function Dashboard() {
             <div className={`delta-pill ${deltaKind.spend}`}>{delta.spend>0?'+':'-'}${(Math.abs(delta.spend)/1000).toFixed(1)}k</div>
           )}
         </div>
+        {/* Advanced / Assumptions moved to bottom */}
+        <div className="panel-section">
+          <details>
+            <summary className="section-header">
+              Advanced — Assumptions & Tuning
+              <HelpTooltip text="Inspect and tweak the model’s underlying assumptions. Collapsed to keep focus on the planning flow." />
+            </summary>
+            <Assumptions />
+            <div style={{marginTop:'0.75rem', display:'flex', gap:'8px'}}>
+              <button className="ai-button" onClick={() => setShowTune(true)}>
+                ✨ AI Parameter Suggestions (beta)
+              </button>
+            </div>
+          </details>
+        </div>
       </div>
 
       {/* Main Content Grid */}
@@ -487,10 +520,11 @@ export function Dashboard() {
         {/* Left Panel: Controls */}
         <div className="control-panel">
           <div className="panel-section">
-            <h3 className="section-header">
-              <span className="step-badge">1</span> Strategy Controls
-              <HelpTooltip text="Adjust posting frequency, timeline, and strategy approach to test different growth scenarios" />
-            </h3>
+            <details open>
+              <summary className="section-header">
+                <span className="step-badge">1</span> Strategy Controls
+                <HelpTooltip text="Adjust posting frequency, timeline, and strategy approach to test different growth scenarios" />
+              </summary>
 
             <div className="control-group">
               <label>Posts Per Week</label>
@@ -529,30 +563,17 @@ export function Dashboard() {
                 <option>Ambitious</option>
               </select>
             </div>
-          </div>
-
-          {/* Assumptions Panel */}
-          <div className="panel-section">
-            <h3 className="section-header">
-              Assumptions
-              <HelpTooltip text="Key model assumptions driving the forecast. Collapsed by default to keep the interface clean." />
-            </h3>
-            <details>
-              <summary style={{cursor:'pointer', color:'var(--text-secondary)'}}>Show assumptions</summary>
-              <Assumptions />
-              <div style={{marginTop:'0.75rem', display:'flex', gap:'8px'}}>
-                <button className="ai-button" onClick={() => setShowTune(true)}>
-                  ✨ AI Parameter Suggestions (beta)
-                </button>
-              </div>
             </details>
           </div>
+
+          {/* Assumptions moved to Advanced at bottom */}
           {/* Repositioned: Paid Media and Budget panels after Content Mix */}
           <div className="panel-section">
-            <h3 className="section-header">
-              <span className="step-badge">5</span> Paid Media
-              <HelpTooltip text="Optional: Include paid impressions per week and how they are allocated by platform. Uses industry conversion defaults (imp → views → engagements → follows)." />
-            </h3>
+            <details>
+              <summary className="section-header">
+                <span className="step-badge">5</span> Paid Media
+                <HelpTooltip text="Optional: Include paid impressions per week and how they are allocated by platform. Uses industry conversion defaults (imp → views → engagements → follows)." />
+              </summary>
             <div className="control-group" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
               <label>Enable Paid Media</label>
               <input type="checkbox" checked={enablePaid} onChange={e=>setEnablePaid(e.target.checked)} />
@@ -593,13 +614,15 @@ export function Dashboard() {
                 </div>
               </>
             )}
+            </details>
           </div>
 
           <div className="panel-section">
-            <h3 className="section-header">
-              <span className="step-badge">6</span> Growth Strategy & Metrics
-              <HelpTooltip text="Budget-based predictive modeling using cost-per-follower (CPF) ranges. Defaults to $3–$5 across paid, creator, acquisition." />
-            </h3>
+            <details>
+              <summary className="section-header">
+                <span className="step-badge">6</span> Growth Strategy & Metrics
+                <HelpTooltip text="Budget-based predictive modeling using cost-per-follower (CPF) ranges. Defaults to $3–$5 across paid, creator, acquisition." />
+              </summary>
             <div className="control-group" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
               <label>Enable Budget Model</label>
               <input type="checkbox" checked={enableBudget} onChange={e=>setEnableBudget(e.target.checked)} />
@@ -642,90 +665,97 @@ export function Dashboard() {
                 </div>
               </>
             )}
+            </details>
           </div>
           {/* Paid Media panel moved below Content Mix for a more natural workflow */}
 
           {/* Growth Strategy & Metrics panel moved below Content Mix */}
 
           <div className="panel-section">
-            <h3 className="section-header">
-              <span className="step-badge">2</span> Current Followers
-              <HelpTooltip text="Enter the current follower count for each platform. These are your starting numbers for the forecast." />
-            </h3>
-            {Object.keys(currentFollowers).map(platform => (
-              <div key={platform} className="follower-input-group">
-                <label className="platform-name">{platform}</label>
-                <input
-                  type="number"
-                  value={currentFollowers[platform as keyof typeof currentFollowers]}
-                  onChange={e => updateFollowerCount(platform, e.target.value)}
-                  className="follower-input"
-                />
-              </div>
-            ))}
-          </div>
-
-          <div className="panel-section">
-            <h3 className="section-header">
-              <span className="step-badge">3</span> Platform Allocation
-              <HelpTooltip text="Set what percentage of your total weekly posts go to each platform. Must total 100%." />
-            </h3>
-            {Object.keys(platformAllocation).map(platform => (
-              <div key={platform} className="platform-control">
-                <div className="platform-header">
-                  <span className="platform-name">{platform}</span>
-                  <span className="platform-percent">{platformAllocation[platform as keyof typeof platformAllocation]}%</span>
+            <details open>
+              <summary className="section-header">
+                <span className="step-badge">2</span> Current Followers
+                <HelpTooltip text="Enter the current follower count for each platform. These are your starting numbers for the forecast." />
+              </summary>
+              {Object.keys(currentFollowers).map(platform => (
+                <div key={platform} className="follower-input-group">
+                  <label className="platform-name">{platform}</label>
+                  <input
+                    type="number"
+                    value={currentFollowers[platform as keyof typeof currentFollowers]}
+                    onChange={e => updateFollowerCount(platform, e.target.value)}
+                    className="follower-input"
+                  />
                 </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="50"
-                  value={platformAllocation[platform as keyof typeof platformAllocation]}
-                  onChange={e => updatePlatformAllocation(platform, parseInt(e.target.value))}
-                  className="slider platform-slider"
-                />
-              </div>
-            ))}
+              ))}
+            </details>
           </div>
 
           <div className="panel-section">
-            <h3 className="section-header">
-              <span className="step-badge">4</span> Content Mix
-              <HelpTooltip text="Define the content type distribution for each platform. Click platform names to expand." />
-            </h3>
-            {Object.keys(contentMix).map(platform => (
-              <div key={platform} className="content-mix-section">
-                <button
-                  className="content-mix-header"
-                  onClick={() => setExpandedContentMix(expandedContentMix === platform ? null : platform)}
-                >
-                  <span className="platform-name">{platform}</span>
-                  <span className="expand-icon">{expandedContentMix === platform ? '▼' : '▶'}</span>
-                </button>
-                {expandedContentMix === platform && (
-                  <div className="content-mix-controls">
-                    {Object.keys(contentMix[platform as keyof typeof contentMix]).map(contentType => {
-                      const platformMix = contentMix[platform as keyof typeof contentMix]
-                      const value = platformMix[contentType as keyof typeof platformMix]
-                      return (
-                        <div key={contentType} className="content-mix-item">
-                          <label>{contentType}</label>
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={value}
-                            onChange={e => updateContentMix(platform, contentType, parseInt(e.target.value))}
-                            className="slider content-slider"
-                          />
-                          <span className="content-value">{value}%</span>
-                        </div>
-                      )
-                    })}
+            <details open>
+              <summary className="section-header">
+                <span className="step-badge">3</span> Platform Allocation
+                <HelpTooltip text="Set what percentage of your total weekly posts go to each platform. Must total 100%." />
+              </summary>
+              {Object.keys(platformAllocation).map(platform => (
+                <div key={platform} className="platform-control">
+                  <div className="platform-header">
+                    <span className="platform-name">{platform}</span>
+                    <span className="platform-percent">{platformAllocation[platform as keyof typeof platformAllocation]}%</span>
                   </div>
-                )}
-              </div>
-            ))}
+                  <input
+                    type="range"
+                    min="0"
+                    max="50"
+                    value={platformAllocation[platform as keyof typeof platformAllocation]}
+                    onChange={e => updatePlatformAllocation(platform, parseInt(e.target.value))}
+                    className="slider platform-slider"
+                  />
+                </div>
+              ))}
+            </details>
+          </div>
+
+          <div className="panel-section">
+            <details open>
+              <summary className="section-header">
+                <span className="step-badge">4</span> Content Mix
+                <HelpTooltip text="Define the content type distribution for each platform. Click platform names to expand." />
+              </summary>
+              {Object.keys(contentMix).map(platform => (
+                <div key={platform} className="content-mix-section">
+                  <button
+                    className="content-mix-header"
+                    onClick={() => setExpandedContentMix(expandedContentMix === platform ? null : platform)}
+                  >
+                    <span className="platform-name">{platform}</span>
+                    <span className="expand-icon">{expandedContentMix === platform ? '▼' : '▶'}</span>
+                  </button>
+                  {expandedContentMix === platform && (
+                    <div className="content-mix-controls">
+                      {Object.keys(contentMix[platform as keyof typeof contentMix]).map(contentType => {
+                        const platformMix = contentMix[platform as keyof typeof contentMix]
+                        const value = platformMix[contentType as keyof typeof platformMix]
+                        return (
+                          <div key={contentType} className="content-mix-item">
+                            <label>{contentType}</label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={value}
+                              onChange={e => updateContentMix(platform, contentType, parseInt(e.target.value))}
+                              className="slider content-slider"
+                            />
+                            <span className="content-value">{value}%</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </details>
           </div>
 
           <div className="panel-section ai-section">
@@ -799,11 +829,18 @@ export function Dashboard() {
           {/* Historical context first */}
           {historicalData && (
             <div className="historical-section" style={{marginBottom:'1.25rem'}}>
-              <h3 className="section-header" style={{marginBottom:'0.75rem'}}>
-                Historical Context
-                <HelpTooltip text="Past performance data showing engagement trends, sentiment analysis, and popular tags over time" />
-              </h3>
+              <div className="section-header" style={{marginBottom:'0.75rem', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                <div>
+                  Historical Context
+                  <HelpTooltip text="Past performance data showing engagement trends, sentiment analysis, and popular tags over time" />
+                </div>
+                <button className="ai-button" onClick={()=> setHistoricalCollapsed(v=>!v)}>
+                  {historicalCollapsed ? 'Expand' : 'Minimize'}
+                </button>
+              </div>
 
+              {!historicalCollapsed && (
+              <>
               <div className="historical-tabs">
                 <button
                   className={`historical-tab ${historicalTab === 'mentions' ? 'active' : ''}`}
@@ -875,13 +912,27 @@ export function Dashboard() {
                   </ResponsiveContainer>
                 )}
               </div>
+              </>
+              )}
             </div>
           )}
           <div className="chart-container main-chart">
-            <div className="chart-header">
-              <h2>Growth Forecast - {months} Months</h2>
-              {loading && <span className="loading-indicator">Calculating...</span>}
-            </div>
+              <div className="chart-header">
+                <h2>Followers — Historical & Forecast</h2>
+                {loading && <span className="loading-indicator">Calculating...</span>}
+                <div style={{marginLeft:'auto', display:'flex', gap:'6px', flexWrap:'wrap', alignItems:'center'}}>
+                  <button className={`ai-button ${chartMode==='historical'?'active':''}`} onClick={()=> setChartMode('historical')}>Historical</button>
+                  <button className={`ai-button ${chartMode==='forecast'?'active':''}`} onClick={()=> setChartMode('forecast')}>Forecast</button>
+                  <button className={`ai-button ${chartMode==='both'?'active':''}`} onClick={()=> setChartMode('both')}>Both</button>
+                  <div style={{display:'flex', gap:'8px', marginLeft:'8px'}}>
+                    {(['Total','Instagram','TikTok','YouTube','Facebook'] as const).map((p)=> (
+                      <label key={p} style={{display:'flex', alignItems:'center', gap:'4px', color:'var(--text-secondary)', fontSize:'0.85rem'}}>
+                        <input type="checkbox" checked={showPlatforms[p]} onChange={e=> setShowPlatforms(prev=> ({...prev, [p]: e.target.checked}))} /> {p}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
             {scenarios.length > 0 && (
               <div className="scenario-toggles">
@@ -903,7 +954,28 @@ export function Dashboard() {
             )}
 
             <ResponsiveContainer width="100%" height={400}>
-              <ComposedChart data={chartData}>
+              <ComposedChart data={(function(){
+                if (chartMode==='forecast') return chartData
+                const hist = (followerHistory||[]).map((row:any, idx:number)=> ({
+                  month: row.label || `H${idx+1}`,
+                  Total_hist: row.Total,
+                  Instagram_hist: row.Instagram,
+                  TikTok_hist: row.TikTok,
+                  YouTube_hist: row.YouTube,
+                  Facebook_hist: row.Facebook,
+                }))
+                if (chartMode==='historical') return hist
+                // both: concatenate
+                const fc = chartData.map((row:any)=> ({
+                  month: row.month,
+                  Total_forecast: row.Total,
+                  Instagram_forecast: row.Instagram,
+                  TikTok_forecast: row.TikTok,
+                  YouTube_forecast: row.YouTube,
+                  Facebook_forecast: row.Facebook,
+                }))
+                return [...hist, ...fc]
+              })()}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="month" stroke="var(--text-secondary)" />
                 <YAxis stroke="var(--text-secondary)" tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} />
@@ -918,7 +990,7 @@ export function Dashboard() {
                   strokeDasharray="5 5"
                   label={{ value: 'Goal', position: 'right', fill: 'var(--fountain-blue)' }}
                 />
-                {enableBudget && bandHigh && bandLow && (
+                {chartMode==='forecast' && enableBudget && bandHigh && bandLow && (
                   <>
                     <Area type="monotone" dataKey="BandLow" stackId="band" stroke="none" fill="transparent" />
                     <Area type="monotone" dataKey="BandDelta" stackId="band" stroke="none" fill={SERIES_COLORS.bandFill} />
@@ -926,12 +998,36 @@ export function Dashboard() {
                     <Line type="monotone" dataKey="BandLow" stroke={SERIES_COLORS.bandEdge} strokeWidth={1.5} dot={false} strokeDasharray="6 6" name="Pessimistic (CPF max)" />
                   </>
                 )}
-                <Line type="monotone" dataKey="Total" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} name="Total (Manual)" />
-                <Line type="monotone" dataKey="Instagram" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} strokeDasharray="4 2" />
-                <Line type="monotone" dataKey="TikTok" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} strokeDasharray="3 3" />
-                <Line type="monotone" dataKey="YouTube" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} strokeDasharray="6 3" />
-                <Line type="monotone" dataKey="Facebook" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} strokeDasharray="2 2" />
-                {scenarios.map((scenario, idx) =>
+                {chartMode==='forecast' && (
+                  <>
+                    {showPlatforms.Total && (<Line type="monotone" dataKey="Total" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} name="Total (Manual)" />)}
+                    {showPlatforms.Instagram && (<Line type="monotone" dataKey="Instagram" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} strokeDasharray="4 2" />)}
+                    {showPlatforms.TikTok && (<Line type="monotone" dataKey="TikTok" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} strokeDasharray="3 3" />)}
+                    {showPlatforms.YouTube && (<Line type="monotone" dataKey="YouTube" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} strokeDasharray="6 3" />)}
+                    {showPlatforms.Facebook && (<Line type="monotone" dataKey="Facebook" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} strokeDasharray="2 2" />)}
+                  </>
+                )}
+                {chartMode!=='forecast' && (
+                  <>
+                    {/* Historical solid */}
+                    {showPlatforms.Total && (<Line type="monotone" dataKey="Total_hist" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} name="Total (hist)" />)}
+                    {showPlatforms.Instagram && (<Line type="monotone" dataKey="Instagram_hist" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} />)}
+                    {showPlatforms.TikTok && (<Line type="monotone" dataKey="TikTok_hist" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} />)}
+                    {showPlatforms.YouTube && (<Line type="monotone" dataKey="YouTube_hist" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} />)}
+                    {showPlatforms.Facebook && (<Line type="monotone" dataKey="Facebook_hist" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} />)}
+                  </>
+                )}
+                {chartMode==='both' && (
+                  <>
+                    {/* Forecast dashed continuation */}
+                    {showPlatforms.Total && (<Line type="monotone" dataKey="Total_forecast" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} strokeDasharray="6 6" name="Total (forecast)" />)}
+                    {showPlatforms.Instagram && (<Line type="monotone" dataKey="Instagram_forecast" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} strokeDasharray="6 6" />)}
+                    {showPlatforms.TikTok && (<Line type="monotone" dataKey="TikTok_forecast" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} strokeDasharray="6 6" />)}
+                    {showPlatforms.YouTube && (<Line type="monotone" dataKey="YouTube_forecast" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} strokeDasharray="6 6" />)}
+                    {showPlatforms.Facebook && (<Line type="monotone" dataKey="Facebook_forecast" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} strokeDasharray="6 6" />)}
+                  </>
+                )}
+                {chartMode==='forecast' && scenarios.map((scenario, idx) =>
                   scenario.visible && (
                     <Line
                       key={idx}

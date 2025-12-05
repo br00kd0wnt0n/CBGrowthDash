@@ -74,8 +74,8 @@ def saturating_effect(freq_per_week: float, half_sat: float) -> float:
     return float(freq_per_week / (freq_per_week + half_sat))
 
 
-def blended_content_multiplier(platform: str, mix: dict) -> float:
-    mults = CONTENT_MULT[platform]
+def blended_content_multiplier(platform: str, mix: dict, content_mult_override: dict | None = None) -> float:
+    mults = (content_mult_override or CONTENT_MULT)[platform]
     s = sum(max(v, 0) for v in mix.values()) or 1.0
     return float(sum(mults[t] * max(mix.get(t, 0), 0) for t in POST_TYPES) / s)
 
@@ -162,6 +162,13 @@ def forecast_growth(
     cpf_paid: Dict[str, float] | None = None,
     cpf_creator: Dict[str, float] | None = None,
     cpf_acquisition: Dict[str, float] | None = None,
+    # overrides from calibration
+    base_monthly_rate: Dict[str, float] | None = None,
+    platform_monthly_cap: Dict[str, float] | None = None,
+    content_mult: Dict[str, Dict[str, float]] | None = None,
+    per_post_gain_base: Dict[str, float] | None = None,
+    # seasonality/taper
+    month_decay_per_month: float = 0.0,
 ) -> pd.DataFrame:
     """Run growth forecast simulation"""
     weeks = months * 4 + 4
@@ -203,6 +210,11 @@ def forecast_growth(
     weekly = []
     followers = {p: float(max(current_followers.get(p, 0), 0)) for p in PLATFORMS}
 
+    # Apply overrides for constants
+    BMR = base_monthly_rate or BASE_MONTHLY_RATE
+    PMC = platform_monthly_cap or PLATFORM_MONTHLY_CAP
+    PPG = per_post_gain_base or PER_POST_GAIN_BASE
+
     for w in range(weeks):
         ei = weekly_engagement_forecast[w]
         week_snapshot = {"Week": w}
@@ -211,24 +223,28 @@ def forecast_growth(
 
         for p in PLATFORMS:
             freq_eff = saturating_effect(posts_per_platform[p], FREQ_HALF_SAT[p])
-            content_mult = blended_content_multiplier(p, content_mix_norm[p])
+            c_mult = blended_content_multiplier(p, content_mix_norm[p], content_mult_override=content_mult)
             div_factor = diversity_factor(content_mix_norm[p])
 
             freq_cfg = RECOMMENDED_FREQ[p]
             over_pen = oversaturation_penalty(posts_per_platform[p], freq_cfg["soft"], freq_cfg["hard"])
             consist = consistency_boost(posts_per_platform[p], freq_cfg["min"], freq_cfg["max"])
 
-            base_rate = BASE_MONTHLY_RATE[p] / 4.0
-            plan_intensity = (1.0 + sensitivity * ei * freq_eff * content_mult * div_factor * over_pen * consist)
+            base_rate = BMR[p] / 4.0
+            plan_intensity = (1.0 + sensitivity * ei * freq_eff * c_mult * div_factor * over_pen * consist)
             weekly_rate = base_rate * plan_intensity
+            # month-level taper (gentle seasonality/decay)
+            if month_decay_per_month > 0:
+                m_idx = min(w // 4, months - 1)
+                weekly_rate *= max(0.5, 1.0 - month_decay_per_month * m_idx)
 
-            cap_weekly = (1.0 + PLATFORM_MONTHLY_CAP[p]) ** (1/4.0) - 1.0
+            cap_weekly = (1.0 + PMC[p]) ** (1/4.0) - 1.0
             weekly_rate = min(weekly_rate, cap_weekly)
             mult_add = followers[p] * weekly_rate
 
             quality = 0.5 + 0.5 * ei
             sat_quality = 0.5 + 0.5 * freq_eff
-            per_post = PER_POST_GAIN_BASE[p] * acq_scalar * quality * sat_quality * content_mult * div_factor * over_pen * consist
+            per_post = PPG[p] * acq_scalar * quality * sat_quality * c_mult * div_factor * over_pen * consist
             add_posts = posts_per_platform[p] * per_post
 
             # Paid media additive followers this week

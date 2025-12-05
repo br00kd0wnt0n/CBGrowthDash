@@ -60,6 +60,15 @@ class ForecastRequest(BaseModel):
         default=None,
         description="Acquisition CPF range: {min, mid, max}. Defaults to {3,4,5}."
     )
+    # Sheet-driven calibration
+    use_sheet_calibration: Optional[bool] = Field(
+        default=False,
+        description="If true, parse the multi-tab workbook to calibrate assumptions (rates, caps, per-post gains, CPF)."
+    )
+    sheet_path: Optional[str] = Field(
+        default=None,
+        description="Optional override path to the Excel workbook (defaults to public/Care Bears Audience Growth KPis .xlsx)."
+    )
 
 
 class MonthlyForecast(BaseModel):

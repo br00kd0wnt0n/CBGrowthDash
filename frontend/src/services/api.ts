@@ -72,6 +72,7 @@ export interface InsightResponse { insight: string }
 export interface AssumptionsPayload { assumptions: any[] }
 export interface ParamSuggestion { key: string; current: number; suggested: number; reason: string; confidence: string }
 export interface ParamTuneResponse { suggestions: ParamSuggestion[] }
+export interface FollowersHistoryPayload { labels: string[]; data: Array<any> }
 
 export const api = {
   getHistoricalData: () => request<HistoricalDataResponse>('/api/historical'),
@@ -91,6 +92,7 @@ export const api = {
     body: JSON.stringify(data),
   }),
   getAssumptions: () => request<AssumptionsPayload>('/api/assumptions-plain'),
+  getFollowersHistory: (sheetPath?: string) => request<FollowersHistoryPayload>(`/api/followers-history${sheetPath?`?sheet_path=${encodeURIComponent(sheetPath)}`:''}`),
   tuneParameters: (data: any) => request<ParamTuneResponse>('/api/ai/tune-parameters', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
