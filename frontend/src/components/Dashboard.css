@@ -115,6 +115,46 @@
   justify-content: space-between;
 }
 
+.section-header.clickable {
+  cursor: pointer;
+  user-select: none;
+  border-radius: 8px;
+  padding: 0.5rem;
+  margin: -0.5rem -0.5rem 1rem -0.5rem;
+  transition: background 0.15s ease;
+}
+
+.section-header.clickable:hover {
+  background: var(--bg-tertiary);
+}
+
+.section-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.collapse-icon {
+  font-size: 0.8rem;
+  width: 1.2rem;
+  color: var(--text-secondary);
+  transition: transform 0.2s ease;
+}
+
+.collapse-icon.collapsed {
+  transform: rotate(-90deg);
+}
+
+.collapsed-summary {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  padding: 0.25rem 0;
+  margin-top: -0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .step-badge {
   display: inline-flex;
   align-items: center;
@@ -950,4 +990,28 @@
     flex-direction: column;
     gap: 0.5rem;
   }
+}
+
+/* Compact chart mode toggle buttons */
+.chart-mode-btn {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chart-mode-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.chart-mode-btn.active {
+  background: var(--fountain-blue);
+  color: white;
+  border-color: var(--fountain-blue);
 }

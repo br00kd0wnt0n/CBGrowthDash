@@ -78,7 +78,7 @@ export function Dashboard() {
   const [aiInsights, setAiInsights] = useState<AIInsightsResponse | null>(null)
   const [scenarios, setScenarios] = useState<ScenarioWithForecast[]>([])
   const [expandedContentMix, setExpandedContentMix] = useState<string | null>(null)
-  const [historicalTab, setHistoricalTab] = useState<'mentions' | 'sentiment' | 'tags'>('mentions')
+  const [historicalTab, setHistoricalTab] = useState<'mentions' | 'sentiment' | 'tags' | 'growth'>('mentions')
   // Confidence band totals (per month)
   const [bandHigh, setBandHigh] = useState<number[] | null>(null) // optimistic (CPF min)
   const [bandLow, setBandLow] = useState<number[] | null>(null)   // pessimistic (CPF max)
@@ -97,6 +97,17 @@ export function Dashboard() {
   const [selectedBreakdownIndex, setSelectedBreakdownIndex] = useState<number>(0)
   // Collapsible sections
   const [historicalCollapsed, setHistoricalCollapsed] = useState<boolean>(false)
+  // Sidebar section collapse states
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<{[key:string]:boolean}>({
+    strategy: false,
+    followers: false,
+    platform: false,
+    contentMix: false,
+    paidMedia: true,
+    budget: true,
+    aiInsights: false,
+    advanced: true,
+  })
 
   const totalFollowers = Object.values(currentFollowers).reduce((a, b) => a + b, 0)
   const goalFollowers = totalFollowers * 2 // Double in 12 months
@@ -363,6 +374,10 @@ export function Dashboard() {
     ))
   }
 
+  const toggleSidebarSection = (key: string) => {
+    setSidebarCollapsed(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
   const updatePlatformAllocation = (platform: string, value: number) => {
     setPlatformAllocation(prev => ({ ...prev, [platform]: value }))
   }
@@ -498,21 +513,6 @@ export function Dashboard() {
             <div className={`delta-pill ${deltaKind.spend}`}>{delta.spend>0?'+':'-'}${(Math.abs(delta.spend)/1000).toFixed(1)}k</div>
           )}
         </div>
-        {/* Advanced / Assumptions moved to bottom */}
-        <div className="panel-section">
-          <details>
-            <summary className="section-header">
-              Advanced — Assumptions & Tuning
-              <HelpTooltip text="Inspect and tweak the model’s underlying assumptions. Collapsed to keep focus on the planning flow." />
-            </summary>
-            <Assumptions />
-            <div style={{marginTop:'0.75rem', display:'flex', gap:'8px'}}>
-              <button className="ai-button" onClick={() => setShowTune(true)}>
-                ✨ AI Parameter Suggestions (beta)
-              </button>
-            </div>
-          </details>
-        </div>
       </div>
 
       {/* Main Content Grid */}
@@ -520,12 +520,17 @@ export function Dashboard() {
         {/* Left Panel: Controls */}
         <div className="control-panel">
           <div className="panel-section">
-            <details open>
-              <summary className="section-header">
+            <div className="section-header clickable" onClick={() => toggleSidebarSection('strategy')}>
+              <div className="section-title-group">
+                <span className={`collapse-icon ${sidebarCollapsed.strategy ? 'collapsed' : ''}`}>▾</span>
                 <span className="step-badge">1</span> Strategy Controls
-                <HelpTooltip text="Adjust posting frequency, timeline, and strategy approach to test different growth scenarios" />
-              </summary>
-
+              </div>
+              <HelpTooltip text="Adjust posting frequency, timeline, and strategy approach to test different growth scenarios" />
+            </div>
+            {sidebarCollapsed.strategy ? (
+              <div className="collapsed-summary">{postsPerWeek} posts/wk • {months}mo • {preset}</div>
+            ) : (
+            <>
             <div className="control-group">
               <label>Posts Per Week</label>
               <input
@@ -563,17 +568,24 @@ export function Dashboard() {
                 <option>Ambitious</option>
               </select>
             </div>
-            </details>
+            </>
+            )}
           </div>
 
           {/* Assumptions moved to Advanced at bottom */}
           {/* Repositioned: Paid Media and Budget panels after Content Mix */}
           <div className="panel-section">
-            <details>
-              <summary className="section-header">
+            <div className="section-header clickable" onClick={() => toggleSidebarSection('paidMedia')}>
+              <div className="section-title-group">
+                <span className={`collapse-icon ${sidebarCollapsed.paidMedia ? 'collapsed' : ''}`}>▾</span>
                 <span className="step-badge">5</span> Paid Media
-                <HelpTooltip text="Optional: Include paid impressions per week and how they are allocated by platform. Uses industry conversion defaults (imp → views → engagements → follows)." />
-              </summary>
+              </div>
+              <HelpTooltip text="Optional: Include paid impressions per week and how they are allocated by platform. Uses industry conversion defaults (imp → views → engagements → follows)." />
+            </div>
+            {sidebarCollapsed.paidMedia ? (
+              <div className="collapsed-summary">{enablePaid ? `$${paidFunnelBudgetWeek}/wk @ $${paidCPM} CPM` : 'Disabled'}</div>
+            ) : (
+            <>
             <div className="control-group" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
               <label>Enable Paid Media</label>
               <input type="checkbox" checked={enablePaid} onChange={e=>setEnablePaid(e.target.checked)} />
@@ -614,15 +626,22 @@ export function Dashboard() {
                 </div>
               </>
             )}
-            </details>
+            </>
+            )}
           </div>
 
           <div className="panel-section">
-            <details>
-              <summary className="section-header">
+            <div className="section-header clickable" onClick={() => toggleSidebarSection('budget')}>
+              <div className="section-title-group">
+                <span className={`collapse-icon ${sidebarCollapsed.budget ? 'collapsed' : ''}`}>▾</span>
                 <span className="step-badge">6</span> Growth Strategy & Metrics
-                <HelpTooltip text="Budget-based predictive modeling using cost-per-follower (CPF) ranges. Defaults to $3–$5 across paid, creator, acquisition." />
-              </summary>
+              </div>
+              <HelpTooltip text="Budget-based predictive modeling using cost-per-follower (CPF) ranges. Defaults to $3–$5 across paid, creator, acquisition." />
+            </div>
+            {sidebarCollapsed.budget ? (
+              <div className="collapsed-summary">{enableBudget ? `$${paidBudgetWeek + creatorBudgetWeek + acquisitionBudgetWeek}/wk • $${cpfMid} CPF` : 'Disabled'}</div>
+            ) : (
+            <>
             <div className="control-group" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
               <label>Enable Budget Model</label>
               <input type="checkbox" checked={enableBudget} onChange={e=>setEnableBudget(e.target.checked)} />
@@ -665,18 +684,25 @@ export function Dashboard() {
                 </div>
               </>
             )}
-            </details>
+            </>
+            )}
           </div>
           {/* Paid Media panel moved below Content Mix for a more natural workflow */}
 
           {/* Growth Strategy & Metrics panel moved below Content Mix */}
 
           <div className="panel-section">
-            <details open>
-              <summary className="section-header">
+            <div className="section-header clickable" onClick={() => toggleSidebarSection('followers')}>
+              <div className="section-title-group">
+                <span className={`collapse-icon ${sidebarCollapsed.followers ? 'collapsed' : ''}`}>▾</span>
                 <span className="step-badge">2</span> Current Followers
-                <HelpTooltip text="Enter the current follower count for each platform. These are your starting numbers for the forecast." />
-              </summary>
+              </div>
+              <HelpTooltip text="Enter the current follower count for each platform. These are your starting numbers for the forecast." />
+            </div>
+            {sidebarCollapsed.followers ? (
+              <div className="collapsed-summary">{(totalFollowers/1000000).toFixed(2)}M total</div>
+            ) : (
+              <>
               {Object.keys(currentFollowers).map(platform => (
                 <div key={platform} className="follower-input-group">
                   <label className="platform-name">{platform}</label>
@@ -688,15 +714,22 @@ export function Dashboard() {
                   />
                 </div>
               ))}
-            </details>
+              </>
+            )}
           </div>
 
           <div className="panel-section">
-            <details open>
-              <summary className="section-header">
+            <div className="section-header clickable" onClick={() => toggleSidebarSection('platform')}>
+              <div className="section-title-group">
+                <span className={`collapse-icon ${sidebarCollapsed.platform ? 'collapsed' : ''}`}>▾</span>
                 <span className="step-badge">3</span> Platform Allocation
-                <HelpTooltip text="Set what percentage of your total weekly posts go to each platform. Must total 100%." />
-              </summary>
+              </div>
+              <HelpTooltip text="Set what percentage of your total weekly posts go to each platform. Must total 100%." />
+            </div>
+            {sidebarCollapsed.platform ? (
+              <div className="collapsed-summary">{Object.entries(platformAllocation).map(([p,v]) => `${p.slice(0,2)}:${v}%`).join(' ')}</div>
+            ) : (
+              <>
               {Object.keys(platformAllocation).map(platform => (
                 <div key={platform} className="platform-control">
                   <div className="platform-header">
@@ -713,20 +746,27 @@ export function Dashboard() {
                   />
                 </div>
               ))}
-            </details>
+              </>
+            )}
           </div>
 
           <div className="panel-section">
-            <details open>
-              <summary className="section-header">
+            <div className="section-header clickable" onClick={() => toggleSidebarSection('contentMix')}>
+              <div className="section-title-group">
+                <span className={`collapse-icon ${sidebarCollapsed.contentMix ? 'collapsed' : ''}`}>▾</span>
                 <span className="step-badge">4</span> Content Mix
-                <HelpTooltip text="Define the content type distribution for each platform. Click platform names to expand." />
-              </summary>
+              </div>
+              <HelpTooltip text="Define the content type distribution for each platform. Click platform names to expand." />
+            </div>
+            {sidebarCollapsed.contentMix ? (
+              <div className="collapsed-summary">4 platforms configured</div>
+            ) : (
+              <>
               {Object.keys(contentMix).map(platform => (
                 <div key={platform} className="content-mix-section">
                   <button
                     className="content-mix-header"
-                    onClick={() => setExpandedContentMix(expandedContentMix === platform ? null : platform)}
+                    onClick={(e) => { e.stopPropagation(); setExpandedContentMix(expandedContentMix === platform ? null : platform) }}
                   >
                     <span className="platform-name">{platform}</span>
                     <span className="expand-icon">{expandedContentMix === platform ? '▼' : '▶'}</span>
@@ -755,14 +795,22 @@ export function Dashboard() {
                   )}
                 </div>
               ))}
-            </details>
+              </>
+            )}
           </div>
 
           <div className="panel-section ai-section">
-            <h3 className="section-header">
-              <span className="step-badge">7</span> <span>🤖 AI Insights</span>
+            <div className="section-header clickable" onClick={() => toggleSidebarSection('aiInsights')}>
+              <div className="section-title-group">
+                <span className={`collapse-icon ${sidebarCollapsed.aiInsights ? 'collapsed' : ''}`}>▾</span>
+                <span className="step-badge">7</span> AI Insights
+              </div>
               <HelpTooltip text="Get AI-powered recommendations for 3 alternative strategies: Optimized, Aggressive, and Conservative" />
-            </h3>
+            </div>
+            {sidebarCollapsed.aiInsights ? (
+              <div className="collapsed-summary">Risk: {riskLevel}</div>
+            ) : (
+            <>
             {/* Compact, dynamic insight based on current settings */}
             <div style={{opacity: aiLoadingCompact? 0.6:1, transition:'opacity 0.2s'}}>
               <div className="ai-analysis">{aiInsight || 'Adjust settings to see a contextual insight about your path to goal.'}</div>
@@ -772,7 +820,7 @@ export function Dashboard() {
               className="ai-button"
               disabled={aiLoadingCompact}
             >
-              ↻ Refresh Insight
+              Refresh Insight
             </button>
             <button
               onClick={getAIRecommendations}
@@ -780,7 +828,7 @@ export function Dashboard() {
               className="ai-button"
             >
               {aiLoading && <span className="btn-spinner" />}
-              {aiLoading ? 'Analyzing...' : '🔁 Regenerate Insights'}
+              {aiLoading ? 'Analyzing...' : 'Regenerate Insights'}
             </button>
 
             {aiInsights && (
@@ -789,7 +837,7 @@ export function Dashboard() {
 
                 <div className="ai-insights-list">
                   {aiInsights.key_insights.map((insight, idx) => (
-                    <div key={idx} className="insight-item">💡 {insight}</div>
+                    <div key={idx} className="insight-item">{insight}</div>
                   ))}
                 </div>
               </div>
@@ -801,6 +849,29 @@ export function Dashboard() {
                 {riskLevel}
               </div>
             </div>
+            </>
+            )}
+          </div>
+
+          {/* Advanced — Assumptions & Tuning at bottom */}
+          <div className="panel-section">
+            <div className="section-header clickable" onClick={() => toggleSidebarSection('advanced')}>
+              <div className="section-title-group">
+                <span className={`collapse-icon ${sidebarCollapsed.advanced ? 'collapsed' : ''}`}>▾</span>
+                Advanced — Assumptions & Tuning
+              </div>
+              <HelpTooltip text="Inspect and tweak the model's underlying assumptions. Collapsed to keep focus on the planning flow." />
+            </div>
+            {!sidebarCollapsed.advanced && (
+            <>
+              <Assumptions />
+              <div style={{marginTop:'0.75rem', display:'flex', gap:'8px'}}>
+                <button className="ai-button" onClick={() => setShowTune(true)}>
+                  AI Parameter Suggestions (beta)
+                </button>
+              </div>
+            </>
+            )}
           </div>
         </div>
 
@@ -860,6 +931,12 @@ export function Dashboard() {
                 >
                   Tags
                 </button>
+                <button
+                  className={`historical-tab ${historicalTab === 'growth' ? 'active' : ''}`}
+                  onClick={() => setHistoricalTab('growth')}
+                >
+                  Growth
+                </button>
               </div>
 
               <div className="historical-chart-container">
@@ -911,6 +988,31 @@ export function Dashboard() {
                     </LineChart>
                   </ResponsiveContainer>
                 )}
+
+                {historicalTab === 'growth' && followerHistory && (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={followerHistory}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="label" stroke="var(--text-secondary)" />
+                      <YAxis stroke="var(--text-secondary)" tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} />
+                      <Tooltip
+                        contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
+                        formatter={(value: number) => [(value / 1000).toFixed(0) + 'K', '']}
+                      />
+                      <Legend />
+                      <Line type="monotone" dataKey="Total" stroke={SERIES_COLORS.total} strokeWidth={3} dot={false} />
+                      <Line type="monotone" dataKey="Instagram" stroke={SERIES_COLORS.instagram} strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="TikTok" stroke={SERIES_COLORS.tiktok} strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="YouTube" stroke={SERIES_COLORS.youtube} strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="Facebook" stroke={SERIES_COLORS.facebook} strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+                {historicalTab === 'growth' && !followerHistory && (
+                  <div style={{padding:'2rem', textAlign:'center', color:'var(--text-secondary)'}}>
+                    No historical follower data available
+                  </div>
+                )}
               </div>
               </>
               )}
@@ -920,10 +1022,10 @@ export function Dashboard() {
               <div className="chart-header">
                 <h2>Followers — Historical & Forecast</h2>
                 {loading && <span className="loading-indicator">Calculating...</span>}
-                <div style={{marginLeft:'auto', display:'flex', gap:'6px', flexWrap:'wrap', alignItems:'center'}}>
-                  <button className={`ai-button ${chartMode==='historical'?'active':''}`} onClick={()=> setChartMode('historical')}>Historical</button>
-                  <button className={`ai-button ${chartMode==='forecast'?'active':''}`} onClick={()=> setChartMode('forecast')}>Forecast</button>
-                  <button className={`ai-button ${chartMode==='both'?'active':''}`} onClick={()=> setChartMode('both')}>Both</button>
+                <div style={{marginLeft:'auto', display:'flex', gap:'4px', flexWrap:'wrap', alignItems:'center'}}>
+                  <button className={`chart-mode-btn ${chartMode==='historical'?'active':''}`} onClick={()=> setChartMode('historical')}>Hist</button>
+                  <button className={`chart-mode-btn ${chartMode==='forecast'?'active':''}`} onClick={()=> setChartMode('forecast')}>Fcst</button>
+                  <button className={`chart-mode-btn ${chartMode==='both'?'active':''}`} onClick={()=> setChartMode('both')}>Both</button>
                   <div style={{display:'flex', gap:'8px', marginLeft:'8px'}}>
                     {(['Total','Instagram','TikTok','YouTube','Facebook'] as const).map((p)=> (
                       <label key={p} style={{display:'flex', alignItems:'center', gap:'4px', color:'var(--text-secondary)', fontSize:'0.85rem'}}>
