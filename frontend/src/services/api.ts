@@ -79,6 +79,76 @@ export interface PlatformMetricsResponse {
   engagement: Record<string, (number | null)[]>;
 }
 
+// GWI Research types
+export interface AudiencePreset {
+  id: string;
+  name: string;
+  description: string;
+  segment_focus: 'parents' | 'gifters' | 'collectors' | 'emerging' | 'balanced';
+  platform_allocation: Record<string, number>;
+  posts_per_week: number;
+  rationale: string;
+  data_source: string;
+  risk_level: 'low' | 'medium' | 'high';
+  expected_goal_range: [number, number];
+  content_recommendations: string[];
+}
+
+export interface PresetsResponse {
+  presets: AudiencePreset[];
+  default: string;
+}
+
+export interface ResearchOverview {
+  meta: {
+    source: string;
+    total_respondents: number;
+    segments: string[];
+    confidence_level: number;
+    margin_of_error: number;
+  };
+  key_insights: Record<string, any>;
+  segments_summary: Record<string, { sample_size: number; description: string }>;
+}
+
+export interface SegmentData {
+  segment: string;
+  data: any;
+  insights: {
+    segment: string;
+    sample_size: number;
+    description: string;
+    top_platforms: Array<{ platform: string; index: number; insight: string }>;
+    top_drivers?: Array<{ driver: string; pct: number }>;
+    top_motivations?: Array<{ motivation: string; pct: number }>;
+  };
+}
+
+export interface PlatformInsight {
+  platform: string;
+  segments: Record<string, { total_usage: number; purchaser_usage: number; index: number }>;
+  avg_index: number;
+  insight: string;
+}
+
+export interface AllocationRecommendation {
+  recommended_allocation: Record<string, number>;
+  rationale: string;
+  confidence: number;
+  segment_weights: Record<string, number>;
+}
+
+export interface ContextualInsight {
+  type: 'positive' | 'warning' | 'info' | 'highlight';
+  text: string;
+  detail: string;
+}
+
+export interface ContextualInsightsResponse {
+  context: string;
+  insights: ContextualInsight[];
+}
+
 export const api = {
   getHistoricalData: () => request<HistoricalDataResponse>('/api/historical'),
   runForecast: (data: ForecastRequest) => request<ForecastResponse>('/api/forecast', {
@@ -105,4 +175,20 @@ export const api = {
   }),
   health: () => request<{ status: string; version: string }>('/health'),
   getPlatformMetrics: () => request<PlatformMetricsResponse>('/api/platform-metrics'),
+  // Research API endpoints
+  getResearchOverview: () => request<ResearchOverview>('/api/research/overview'),
+  getPresets: () => request<PresetsResponse>('/api/research/presets'),
+  getPreset: (presetId: string) => request<AudiencePreset>(`/api/research/presets/${presetId}`),
+  getSegment: (segmentName: string) => request<SegmentData>(`/api/research/segments/${segmentName}`),
+  getPlatformInsight: (platformName: string) => request<PlatformInsight>(`/api/research/platforms/${platformName}`),
+  getRecommendedAllocation: (audienceMix: { parents: number; gifters: number; collectors: number }) =>
+    request<AllocationRecommendation>('/api/research/allocation/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(audienceMix),
+    }),
+  getContextualInsights: (context: string, platform?: string, value?: number) =>
+    request<ContextualInsightsResponse>(
+      `/api/research/insights/contextual/${context}${platform ? `?platform=${platform}` : ''}${value ? `&value=${value}` : ''}`
+    ),
 };

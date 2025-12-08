@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { LineChart, ComposedChart, BarChart, Bar, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, LabelList } from 'recharts'
-import { api, type HistoricalDataResponse, type ForecastRequest, type ForecastResponse, type AIInsightsResponse, type AIScenario, type PlatformMetricsResponse } from '../services/api'
+import { api, type HistoricalDataResponse, type ForecastRequest, type ForecastResponse, type AIInsightsResponse, type AIScenario, type PlatformMetricsResponse, type AudiencePreset, type AllocationRecommendation } from '../services/api'
 import './Dashboard.css'
 
 // Number formatting utility (currently unused but available for future use)
@@ -101,13 +101,20 @@ export function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<{[key:string]:boolean}>({
     strategy: true,
     followers: true,
-    platform: true,
     contentMix: true,
     paidMedia: true,
     budget: true,
     aiInsights: true,
     advanced: true,
+    audienceMix: true,
   })
+
+  // GWI Research state
+  const [audiencePresets, setAudiencePresets] = useState<AudiencePreset[]>([])
+  const [selectedPresetId, setSelectedPresetId] = useState<string>('balanced')
+  const [audienceMix, setAudienceMix] = useState({ parents: 60, gifters: 25, collectors: 15 })
+  const [recommendedAllocation, setRecommendedAllocation] = useState<AllocationRecommendation | null>(null)
+  const [presetModified, setPresetModified] = useState(false)
 
   const totalFollowers = Object.values(currentFollowers).reduce((a, b) => a + b, 0)
   const goalFollowers = totalFollowers * 2 // Double in 12 months
@@ -143,7 +150,53 @@ export function Dashboard() {
     runForecast() // Initial forecast
     // Auto-generate AI insights on first load
     getAIRecommendations()
+    // Load GWI research presets
+    api.getPresets().then(res => {
+      setAudiencePresets(res.presets)
+      // Find and apply the default preset
+      const defaultPreset = res.presets.find(p => p.id === res.default) || res.presets[0]
+      if (defaultPreset) {
+        setSelectedPresetId(defaultPreset.id)
+        applyPreset(defaultPreset)
+      }
+    }).catch(err => console.error('Failed to load presets:', err))
   }, [])
+
+  // Apply preset configuration
+  const applyPreset = (preset: AudiencePreset) => {
+    setPostsPerWeek(preset.posts_per_week)
+    setPlatformAllocation(preset.platform_allocation as any)
+    setPreset(preset.risk_level === 'low' ? 'Conservative' : preset.risk_level === 'high' ? 'Ambitious' : 'Balanced')
+    setPresetModified(false)
+  }
+
+  // Handle preset selection
+  const handlePresetSelect = (presetId: string) => {
+    const preset = audiencePresets.find(p => p.id === presetId)
+    if (preset) {
+      setSelectedPresetId(presetId)
+      applyPreset(preset)
+    }
+  }
+
+  // Fetch and auto-apply recommended allocation when audience mix changes
+  useEffect(() => {
+    const fetchAndApplyRecommendation = async () => {
+      try {
+        const result = await api.getRecommendedAllocation({
+          parents: audienceMix.parents / 100,
+          gifters: audienceMix.gifters / 100,
+          collectors: audienceMix.collectors / 100,
+        })
+        setRecommendedAllocation(result)
+        // Auto-apply the recommended allocation
+        setPlatformAllocation(result.recommended_allocation as any)
+      } catch (err) {
+        console.error('Failed to get recommended allocation:', err)
+      }
+    }
+    fetchAndApplyRecommendation()
+  }, [audienceMix])
 
   // Auto-run forecast when inputs change (with debounce)
   useEffect(() => {
@@ -419,6 +472,17 @@ export function Dashboard() {
     setCurrentFollowers(prev => ({ ...prev, [platform]: numValue }))
   }
 
+  // Get platform-specific research insight for contextual callouts
+  const getPlatformInsight = (platform: string): { text: string; type: 'positive' | 'warning' | 'info' } | null => {
+    const insights: Record<string, { text: string; type: 'positive' | 'warning' | 'info' }> = {
+      TikTok: { text: 'CB purchasers over-index 1.30x on TikTok', type: 'positive' },
+      Instagram: { text: 'CB purchasers over-index 1.15x on Instagram', type: 'positive' },
+      Facebook: { text: 'Gifters show 1.14x index on Facebook', type: 'info' },
+      YouTube: { text: 'Strong for long-form brand content', type: 'info' },
+    }
+    return insights[platform] || null
+  }
+
   // Chart data - combine manual + visible scenarios + individual platforms
   // Forecast starts Jan 2026, runs 12 months through Dec 2026
   const FORECAST_MONTH_LABELS = ['Jan 2026', 'Feb 2026', 'Mar 2026', 'Apr 2026', 'May 2026', 'Jun 2026',
@@ -598,20 +662,163 @@ export function Dashboard() {
 
                 <div className="control-group">
                   <label>
-                    Strategy Preset
-                    <HelpTooltip text="Conservative: Safe approach with lower growth (60% acquisition rate, no campaign boost). Balanced: Standard growth with moderate risk (100% acquisition, 15% campaign lift). Ambitious: Aggressive growth strategy (150% acquisition, 35% campaign lift, higher engagement sensitivity)." />
+                    Audience Preset
+                    <HelpTooltip text="Research-backed presets optimised for different audience segments based on GWI 2024 data (n=29,230). Each preset targets specific demographics with data-driven platform allocations." />
                   </label>
-                  <select value={preset} onChange={e => setPreset(e.target.value)} className="preset-select">
-                    <option>Conservative</option>
-                    <option>Balanced</option>
-                    <option>Ambitious</option>
+                  <select
+                    value={selectedPresetId}
+                    onChange={e => handlePresetSelect(e.target.value)}
+                    className="preset-select"
+                  >
+                    {audiencePresets.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
                   </select>
+                  {audiencePresets.find(p => p.id === selectedPresetId) && (
+                    <div className="preset-details">
+                      <div className="preset-description">
+                        {audiencePresets.find(p => p.id === selectedPresetId)?.description}
+                      </div>
+                      <div className="preset-rationale">
+                        <span className="research-badge">GWI 2024</span>
+                        {audiencePresets.find(p => p.id === selectedPresetId)?.rationale}
+                      </div>
+                      {presetModified && (
+                        <div className="preset-modified-notice">
+                          Settings modified from preset defaults
+                          <button
+                            className="reset-preset-btn"
+                            onClick={() => handlePresetSelect(selectedPresetId)}
+                          >
+                            Reset
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Assumptions moved to Advanced at bottom */}
+          {/* Audience Composition Mixer */}
+          <div className={`panel-section ${sidebarCollapsed.audienceMix ? 'is-collapsed' : ''}`}>
+            <div className="section-header clickable" onClick={() => toggleSidebarSection('audienceMix')}>
+              <div className="section-title-group">
+                <span className={`collapse-icon ${sidebarCollapsed.audienceMix ? 'collapsed' : ''}`}>{sidebarCollapsed.audienceMix ? '+' : '−'}</span>
+                Audience Mix
+              </div>
+              {sidebarCollapsed.audienceMix ? (
+                <div className="collapsed-summary">P:{audienceMix.parents}% G:{audienceMix.gifters}% C:{audienceMix.collectors}%</div>
+              ) : (
+                <HelpTooltip text="Adjust target audience composition to get research-backed platform allocation recommendations. Based on GWI 2024 data." />
+              )}
+            </div>
+            <div className={`section-content ${sidebarCollapsed.audienceMix ? 'collapsed' : ''}`}>
+              <div className="section-content-inner">
+                <div className="audience-mix-section">
+                  <div className="audience-slider-group">
+                    <div className="audience-slider-header">
+                      <label>Parents</label>
+                      <span className="audience-slider-value">{audienceMix.parents}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={audienceMix.parents}
+                      onChange={e => {
+                        const newVal = parseInt(e.target.value)
+                        const remaining = 100 - newVal
+                        const currentOthers = audienceMix.gifters + audienceMix.collectors
+                        if (currentOthers === 0) {
+                          setAudienceMix({ parents: newVal, gifters: Math.round(remaining / 2), collectors: remaining - Math.round(remaining / 2) })
+                        } else {
+                          const gifterRatio = audienceMix.gifters / currentOthers
+                          setAudienceMix({ parents: newVal, gifters: Math.round(remaining * gifterRatio), collectors: remaining - Math.round(remaining * gifterRatio) })
+                        }
+                        setPresetModified(true)
+                      }}
+                      className="slider"
+                    />
+                  </div>
+                  <div className="audience-slider-group">
+                    <div className="audience-slider-header">
+                      <label>Gifters</label>
+                      <span className="audience-slider-value">{audienceMix.gifters}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={audienceMix.gifters}
+                      onChange={e => {
+                        const newVal = parseInt(e.target.value)
+                        const remaining = 100 - newVal
+                        const currentOthers = audienceMix.parents + audienceMix.collectors
+                        if (currentOthers === 0) {
+                          setAudienceMix({ parents: Math.round(remaining / 2), gifters: newVal, collectors: remaining - Math.round(remaining / 2) })
+                        } else {
+                          const parentRatio = audienceMix.parents / currentOthers
+                          setAudienceMix({ parents: Math.round(remaining * parentRatio), gifters: newVal, collectors: remaining - Math.round(remaining * parentRatio) })
+                        }
+                        setPresetModified(true)
+                      }}
+                      className="slider"
+                    />
+                  </div>
+                  <div className="audience-slider-group">
+                    <div className="audience-slider-header">
+                      <label>Collectors</label>
+                      <span className="audience-slider-value">{audienceMix.collectors}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={audienceMix.collectors}
+                      onChange={e => {
+                        const newVal = parseInt(e.target.value)
+                        const remaining = 100 - newVal
+                        const currentOthers = audienceMix.parents + audienceMix.gifters
+                        if (currentOthers === 0) {
+                          setAudienceMix({ parents: Math.round(remaining / 2), gifters: remaining - Math.round(remaining / 2), collectors: newVal })
+                        } else {
+                          const parentRatio = audienceMix.parents / currentOthers
+                          setAudienceMix({ parents: Math.round(remaining * parentRatio), gifters: remaining - Math.round(remaining * parentRatio), collectors: newVal })
+                        }
+                        setPresetModified(true)
+                      }}
+                      className="slider"
+                    />
+                  </div>
+                  <div className={`audience-total ${audienceMix.parents + audienceMix.gifters + audienceMix.collectors === 100 ? 'valid' : 'invalid'}`}>
+                    Total: {audienceMix.parents + audienceMix.gifters + audienceMix.collectors}%
+                  </div>
+
+                  {/* Recommended Allocation based on mix */}
+                  {recommendedAllocation && (
+                    <div className="recommendation-box">
+                      <div className="recommendation-header">
+                        <h4>Recommended Allocation</h4>
+                        <span className="confidence-badge">{Math.round(recommendedAllocation.confidence * 100)}% conf.</span>
+                      </div>
+                      <div className="recommendation-allocation">
+                        {Object.entries(recommendedAllocation.recommended_allocation).map(([platform, value]) => (
+                          <div key={platform} className="allocation-item">
+                            <span className="platform">{platform}</span>
+                            <span className="value">{value}%</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="recommendation-rationale">{recommendedAllocation.rationale}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Repositioned: Paid Media and Budget panels after Content Mix */}
           <div className={`panel-section paid-section ${sidebarCollapsed.paidMedia ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('paidMedia')}>
@@ -762,43 +969,6 @@ export function Dashboard() {
             </div>
           </div>
 
-          <div className={`panel-section ${sidebarCollapsed.platform ? 'is-collapsed' : ''}`}>
-            <div className="section-header clickable" onClick={() => toggleSidebarSection('platform')}>
-              <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.platform ? 'collapsed' : ''}`}>{sidebarCollapsed.platform ? '+' : '−'}</span>
-                Platform Allocation
-              </div>
-              {sidebarCollapsed.platform ? (
-                <div className="collapsed-summary">{Object.entries(platformAllocation).map(([p,v]) => `${p.slice(0,2)}:${v}%`).join(' ')}</div>
-              ) : (
-                <HelpTooltip text="Set what percentage of your total weekly posts go to each platform. Must total 100%." />
-              )}
-            </div>
-            <div className={`section-content ${sidebarCollapsed.platform ? 'collapsed' : ''}`}>
-              <div className="section-content-inner">
-                {Object.keys(platformAllocation).map(platform => (
-                  <div key={platform} className="platform-control">
-                    <div className="platform-header">
-                      <span className="platform-name">{platform}</span>
-                      <span className="platform-percent">{platformAllocation[platform as keyof typeof platformAllocation]}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={platformAllocation[platform as keyof typeof platformAllocation]}
-                      onChange={e => updatePlatformAllocation(platform, parseInt(e.target.value))}
-                      className="slider platform-slider"
-                    />
-                  </div>
-                ))}
-                <div className="allocation-total" style={{marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'right'}}>
-                  Total: {Object.values(platformAllocation).reduce((a, b) => a + b, 0)}%
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div className={`panel-section ${sidebarCollapsed.contentMix ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('contentMix')}>
               <div className="section-title-group">
@@ -922,7 +1092,48 @@ export function Dashboard() {
             </div>
             <div className={`section-content ${sidebarCollapsed.advanced ? 'collapsed' : ''}`}>
               <div className="section-content-inner">
-                <Assumptions />
+                {/* Platform Allocation Override */}
+                <div className="advanced-subsection">
+                  <h4 className="advanced-subsection-title">Platform Allocation Override</h4>
+                  <div className="section-subtitle">Use these sliders to manually override the Audience Mix section</div>
+                  {Object.keys(platformAllocation).map(platform => {
+                    const insight = getPlatformInsight(platform)
+                    return (
+                      <div key={platform} className="platform-control">
+                        <div className="platform-header">
+                          <span className="platform-name">{platform}</span>
+                          <span className="platform-percent">{platformAllocation[platform as keyof typeof platformAllocation]}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={platformAllocation[platform as keyof typeof platformAllocation]}
+                          onChange={e => {
+                            updatePlatformAllocation(platform, parseInt(e.target.value))
+                            setPresetModified(true)
+                          }}
+                          className="slider platform-slider"
+                        />
+                        {insight && platformAllocation[platform as keyof typeof platformAllocation] >= 20 && (
+                          <div className={`platform-insight ${insight.type}`}>
+                            <span className="research-badge">GWI</span> {insight.text}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                  <div className="allocation-total" style={{marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'right'}}>
+                    Total: {Object.values(platformAllocation).reduce((a, b) => a + b, 0)}%
+                  </div>
+                </div>
+
+                {/* Assumptions */}
+                <div className="advanced-subsection">
+                  <h4 className="advanced-subsection-title">Model Assumptions</h4>
+                  <Assumptions />
+                </div>
+
                 <div style={{marginTop:'0.75rem', display:'flex', gap:'8px'}}>
                   <button className="ai-button" onClick={() => setShowTune(true)}>
                     AI Parameter Suggestions (beta)
@@ -1467,8 +1678,20 @@ export function Dashboard() {
                         <span className="stat-value">{scenario.posts_per_week}</span>
                       </div>
                       <div className="stat">
-                        <span className="stat-label">Expected</span>
-                        <span className="stat-value">{scenario.expected_outcome}</span>
+                        <span className="stat-label">Projected</span>
+                        <span className="stat-value">
+                          {scenario.forecast
+                            ? `${Math.round(scenario.forecast.progress_to_goal)}% of goal`
+                            : 'Calculating...'}
+                        </span>
+                      </div>
+                      <div className="stat">
+                        <span className="stat-label">Total</span>
+                        <span className="stat-value">
+                          {scenario.forecast
+                            ? `${(scenario.forecast.projected_total / 1000000).toFixed(2)}M`
+                            : '—'}
+                        </span>
                       </div>
                     </div>
                     <div className="scenario-reasoning">{scenario.reasoning}</div>
@@ -1483,6 +1706,16 @@ export function Dashboard() {
                         </div>
                       ))}
                     </div>
+                    <button
+                      className="scenario-apply-btn"
+                      onClick={() => {
+                        setPostsPerWeek(scenario.posts_per_week)
+                        setPlatformAllocation(scenario.platform_allocation as any)
+                        setPresetModified(true)
+                      }}
+                    >
+                      Apply This Scenario
+                    </button>
                   </div>
                 ))}
               </div>

@@ -1,10 +1,40 @@
 """
 AI Strategy Analysis Service
 Uses OpenAI to analyze growth strategies and provide recommendations
+Enhanced with GWI 2024 research data for Care Bears audience insights
 """
 import os
 from typing import Dict, List, Any, Optional
 from models.schemas import InsightRequest, ParamTuneRequest
+
+# GWI Research Context for AI prompts
+GWI_RESEARCH_CONTEXT = """
+GWI 2024 RESEARCH INSIGHTS (n=29,230):
+
+AUDIENCE SEGMENTS:
+1. Parents (n=22,184): Primary purchasers
+   - Platform indices: TikTok 1.30x, Instagram 1.15x, YouTube 1.12x
+   - Purchase drivers: Fun (80%), Safety (80%), Values (79%)
+
+2. Gifters (n=4,876): Gift purchase considerers
+   - Platform indices: Facebook 1.14x, Instagram 1.08x
+   - Key motivator: Brand trust and gifting occasions
+
+3. Collectors (n=2,170): Adult enthusiast buyers
+   - Platform indices: Balanced across platforms
+   - Key motivator: Nostalgia (39%), Values (33%)
+
+PLATFORM PERFORMANCE:
+- TikTok: Highest CB purchaser over-index (1.30x) - best for discovery
+- Instagram: Strong index (1.15x) - good for visual brand storytelling
+- Facebook: Gifter-focused (1.14x index) - brand trust channel
+- YouTube: Long-form content (1.12x) - education and engagement
+
+RECOMMENDATIONS:
+- Parent-focused campaigns: Prioritize TikTok + Instagram (60% combined)
+- Gifter campaigns: Include Facebook (20-25% allocation)
+- Collector campaigns: Balance with nostalgia-driven content
+"""
 
 # Initialize OpenAI client only if API key is available
 client: Optional[object] = None
@@ -51,9 +81,12 @@ def analyze_strategy(
     growth_weekly = budget_info.get("growth_strategy_weekly", 962)
     cpf = budget_info.get("cpf_range", {"min": 3, "mid": 4, "max": 5})
 
-    # Build context for AI
+    # Build context for AI with GWI research
     context = f"""
 You are an expert social media growth strategist analyzing a campaign for Care Bears.
+Use the GWI 2024 research data below to inform your recommendations.
+
+{GWI_RESEARCH_CONTEXT}
 
 PRIMARY OBJECTIVE: Double total followers from {total_followers:,} to {goal:,} within 12 months.
 
@@ -184,7 +217,7 @@ def generate_fallback_recommendations(
     preset: str
 ) -> Dict[str, Any]:
     """
-    Generate rule-based recommendations if AI is unavailable
+    Generate rule-based recommendations informed by GWI 2024 research data
     """
 
     # Analyze current strategy
@@ -192,67 +225,87 @@ def generate_fallback_recommendations(
     tiktok_followers = current_followers.get("TikTok", 0)
     instagram_followers = current_followers.get("Instagram", 0)
 
-    # Simple heuristics
-    tiktok_strong = tiktok_followers > instagram_followers
+    # GWI-informed heuristics
+    tiktok_alloc = platform_allocation.get("TikTok", 0)
+    instagram_alloc = platform_allocation.get("Instagram", 0)
+    facebook_alloc = platform_allocation.get("Facebook", 0)
+
+    # Research shows TikTok 1.30x and Instagram 1.15x over-index
+    optimal_tiktok_range = (28, 35)  # Based on GWI indices
+    optimal_instagram_range = (25, 35)
+
     posting_high = posts_per_week > 30
+    tiktok_underallocated = tiktok_alloc < optimal_tiktok_range[0]
 
     scenarios = []
 
-    # Optimized scenario
-    optimized_allocation = platform_allocation.copy()
-    if tiktok_strong:
-        optimized_allocation["TikTok"] = min(optimized_allocation.get("TikTok", 35) + 5, 45)
-        optimized_allocation["Instagram"] = max(optimized_allocation.get("Instagram", 35) - 5, 25)
-
+    # Optimized scenario - GWI research-backed
     scenarios.append({
         "name": "Optimized",
         "posts_per_week": 28,
-        "platform_allocation": optimized_allocation,
-        "reasoning": "Balanced approach focusing on high-performing platforms while maintaining presence across all channels.",
+        "platform_allocation": {
+            "Instagram": 30,
+            "TikTok": 30,
+            "YouTube": 20,
+            "Facebook": 20
+        },
+        "reasoning": "GWI 2024 data shows CB purchasers over-index 1.30x on TikTok and 1.15x on Instagram. This allocation balances reach efficiency with audience engagement across parent and gifter segments.",
         "risk_level": "MEDIUM",
         "expected_outcome": "92-98% of goal"
     })
 
-    # Aggressive scenario
-    aggressive_allocation = {
-        "Instagram": 30,
-        "TikTok": 40,
-        "YouTube": 20,
-        "Facebook": 10
-    }
+    # Aggressive scenario - Parent Acquisition focus
     scenarios.append({
         "name": "Aggressive",
         "posts_per_week": 35,
-        "platform_allocation": aggressive_allocation,
-        "reasoning": "High-volume approach prioritizing video-first platforms for maximum reach expansion.",
+        "platform_allocation": {
+            "Instagram": 30,
+            "TikTok": 35,
+            "YouTube": 20,
+            "Facebook": 15
+        },
+        "reasoning": "Parent Acquisition strategy: Heavy TikTok allocation (35%) leverages 1.30x purchaser index. High posting frequency maximises discovery among CB-purchasing parents (n=22,184 in GWI study).",
         "risk_level": "HIGH",
         "expected_outcome": "105-115% of goal"
     })
 
-    # Conservative scenario
-    conservative_allocation = {
-        "Instagram": 35,
-        "TikTok": 30,
-        "YouTube": 20,
-        "Facebook": 15
-    }
+    # Conservative scenario - Balanced with Gifter focus
     scenarios.append({
         "name": "Conservative",
         "posts_per_week": 24,
-        "platform_allocation": conservative_allocation,
-        "reasoning": "Sustainable growth strategy focusing on engagement quality over volume.",
+        "platform_allocation": {
+            "Instagram": 30,
+            "TikTok": 25,
+            "YouTube": 20,
+            "Facebook": 25
+        },
+        "reasoning": "Gifter-inclusive strategy: Higher Facebook allocation (25%) captures gifter segment (1.14x index). Lower posting frequency ensures quality content across nostalgia-driven collectors and brand-trust-focused gifters.",
         "risk_level": "LOW",
         "expected_outcome": "85-92% of goal"
     })
 
+    # Build research-informed key insights
+    insights = []
+
+    if tiktok_underallocated:
+        insights.append(f"GWI 2024: TikTok has 1.30x CB purchaser over-index - consider increasing from {tiktok_alloc}% to {optimal_tiktok_range[0]}%+")
+    else:
+        insights.append("TikTok allocation aligns with GWI research (1.30x purchaser index)")
+
+    if facebook_alloc < 15:
+        insights.append("Gifter segment (1.14x on Facebook) may be underserved - consider 15-25% Facebook allocation")
+    else:
+        insights.append(f"Facebook allocation ({facebook_alloc}%) captures gifter segment effectively")
+
+    if posting_high:
+        insights.append("GWI data suggests engagement quality typically decreases above 30 posts/week")
+    else:
+        insights.append("Posting frequency is optimal for maintaining engagement quality")
+
     return {
-        "analysis": f"Current strategy ({preset}, {posts_per_week} posts/week) provides a solid foundation. Consider testing alternative allocations to optimize growth.",
+        "analysis": f"Current strategy ({preset}, {posts_per_week} posts/week) evaluated against GWI 2024 research (n=29,230). {'TikTok allocation could be increased to better reach CB-purchasing parents.' if tiktok_underallocated else 'Platform allocation aligns well with audience segment indices.'}",
         "scenarios": scenarios,
-        "key_insights": [
-            "TikTok shows strong follower base - consider increasing allocation" if tiktok_strong else "Instagram is your primary platform - maintain focus there",
-            "Current posting volume is sustainable" if not posting_high else "High posting frequency may risk oversaturation",
-            "Diversified platform presence reduces dependency risk"
-        ]
+        "key_insights": insights
     }
 
 

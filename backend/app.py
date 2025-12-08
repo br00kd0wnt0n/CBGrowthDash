@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import forecast, ai
+from routes import forecast, ai, research
 from models.schemas import StatusResponse
 
 app = FastAPI(
@@ -28,6 +28,7 @@ app.add_middleware(
 # Include routers
 app.include_router(forecast.router)
 app.include_router(ai.router)
+app.include_router(research.router)
 
 
 @app.get("/", response_model=StatusResponse)
