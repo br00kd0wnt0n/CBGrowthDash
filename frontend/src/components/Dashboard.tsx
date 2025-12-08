@@ -482,7 +482,36 @@ export function Dashboard() {
       <div className="dashboard-grid">
         {/* Left Panel: Controls */}
         <div className="control-panel">
-          <div className={`panel-section ${sidebarCollapsed.strategy ? 'is-collapsed' : ''}`}>
+          <div className={`panel-section ${sidebarCollapsed.followers ? 'is-collapsed' : ''}`}>
+            <div className="section-header clickable" onClick={() => toggleSidebarSection('followers')}>
+              <div className="section-title-group">
+                <span className={`collapse-icon ${sidebarCollapsed.followers ? 'collapsed' : ''}`}>{sidebarCollapsed.followers ? '+' : '−'}</span>
+                Current Followers
+              </div>
+              {sidebarCollapsed.followers ? (
+                <div className="collapsed-summary">{(totalFollowers/1000000).toFixed(1)}M</div>
+              ) : (
+                <HelpTooltip text="Enter the current follower count for each platform. These are your starting numbers for the forecast." />
+              )}
+            </div>
+            <div className={`section-content ${sidebarCollapsed.followers ? 'collapsed' : ''}`}>
+              <div className="section-content-inner">
+                {Object.keys(currentFollowers).map(platform => (
+                  <div key={platform} className="follower-input-group">
+                    <label className="platform-name">{platform}</label>
+                    <input
+                      type="number"
+                      value={currentFollowers[platform as keyof typeof currentFollowers]}
+                      onChange={e => updateFollowerCount(platform, e.target.value)}
+                      className="follower-input"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className={`panel-section strategy-section ${sidebarCollapsed.strategy ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('strategy')}>
               <div className="section-title-group">
                 <span className={`collapse-icon ${sidebarCollapsed.strategy ? 'collapsed' : ''}`}>{sidebarCollapsed.strategy ? '+' : '−'}</span>
@@ -539,7 +568,7 @@ export function Dashboard() {
 
           {/* Assumptions moved to Advanced at bottom */}
           {/* Repositioned: Paid Media and Budget panels after Content Mix */}
-          <div className={`panel-section ${sidebarCollapsed.paidMedia ? 'is-collapsed' : ''}`}>
+          <div className={`panel-section paid-section ${sidebarCollapsed.paidMedia ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('paidMedia')}>
               <div className="section-title-group">
                 <span className={`collapse-icon ${sidebarCollapsed.paidMedia ? 'collapsed' : ''}`}>{sidebarCollapsed.paidMedia ? '+' : '−'}</span>
@@ -597,7 +626,7 @@ export function Dashboard() {
             </div>
           </div>
 
-          <div className={`panel-section ${sidebarCollapsed.budget ? 'is-collapsed' : ''}`}>
+          <div className={`panel-section budget-section ${sidebarCollapsed.budget ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('budget')}>
               <div className="section-title-group">
                 <span className={`collapse-icon ${sidebarCollapsed.budget ? 'collapsed' : ''}`}>{sidebarCollapsed.budget ? '+' : '−'}</span>
@@ -653,38 +682,6 @@ export function Dashboard() {
                     </div>
                   </>
                 )}
-              </div>
-            </div>
-          </div>
-          {/* Paid Media panel moved below Content Mix for a more natural workflow */}
-
-          {/* Growth Strategy & Metrics panel moved below Content Mix */}
-
-          <div className={`panel-section ${sidebarCollapsed.followers ? 'is-collapsed' : ''}`}>
-            <div className="section-header clickable" onClick={() => toggleSidebarSection('followers')}>
-              <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.followers ? 'collapsed' : ''}`}>{sidebarCollapsed.followers ? '+' : '−'}</span>
-                Current Followers
-              </div>
-              {sidebarCollapsed.followers ? (
-                <div className="collapsed-summary">{(totalFollowers/1000000).toFixed(1)}M</div>
-              ) : (
-                <HelpTooltip text="Enter the current follower count for each platform. These are your starting numbers for the forecast." />
-              )}
-            </div>
-            <div className={`section-content ${sidebarCollapsed.followers ? 'collapsed' : ''}`}>
-              <div className="section-content-inner">
-                {Object.keys(currentFollowers).map(platform => (
-                  <div key={platform} className="follower-input-group">
-                    <label className="platform-name">{platform}</label>
-                    <input
-                      type="number"
-                      value={currentFollowers[platform as keyof typeof currentFollowers]}
-                      onChange={e => updateFollowerCount(platform, e.target.value)}
-                      className="follower-input"
-                    />
-                  </div>
-                ))}
               </div>
             </div>
           </div>

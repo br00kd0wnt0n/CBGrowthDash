@@ -389,6 +389,63 @@
   border-color: rgba(147, 112, 219, 0.5);
 }
 
+/* Strategy/Controls Section - Warm amber */
+.strategy-section .section-header.clickable {
+  background: linear-gradient(135deg, rgba(255, 184, 77, 0.15), rgba(255, 110, 97, 0.1));
+  border-color: rgba(255, 184, 77, 0.3);
+}
+
+.strategy-section .section-header.clickable:hover {
+  background: linear-gradient(135deg, rgba(255, 184, 77, 0.25), rgba(255, 110, 97, 0.15));
+  border-color: rgba(255, 184, 77, 0.5);
+}
+
+.strategy-section .collapse-icon {
+  background: #ffb84d;
+}
+
+.strategy-section .collapse-icon.collapsed {
+  background: rgba(255, 184, 77, 0.6);
+}
+
+/* Paid Media Section - Coral/rose */
+.paid-section .section-header.clickable {
+  background: linear-gradient(135deg, rgba(240, 96, 144, 0.15), rgba(255, 110, 97, 0.1));
+  border-color: rgba(240, 96, 144, 0.3);
+}
+
+.paid-section .section-header.clickable:hover {
+  background: linear-gradient(135deg, rgba(240, 96, 144, 0.25), rgba(255, 110, 97, 0.15));
+  border-color: rgba(240, 96, 144, 0.5);
+}
+
+.paid-section .collapse-icon {
+  background: #f06090;
+}
+
+.paid-section .collapse-icon.collapsed {
+  background: rgba(240, 96, 144, 0.6);
+}
+
+/* Budget/Growth Strategy Section - Green/teal */
+.budget-section .section-header.clickable {
+  background: linear-gradient(135deg, rgba(78, 183, 172, 0.15), rgba(100, 200, 150, 0.1));
+  border-color: rgba(78, 183, 172, 0.3);
+}
+
+.budget-section .section-header.clickable:hover {
+  background: linear-gradient(135deg, rgba(78, 183, 172, 0.25), rgba(100, 200, 150, 0.15));
+  border-color: rgba(78, 183, 172, 0.5);
+}
+
+.budget-section .collapse-icon {
+  background: #4eb7ac;
+}
+
+.budget-section .collapse-icon.collapsed {
+  background: rgba(78, 183, 172, 0.6);
+}
+
 .ai-loading-container {
   display: flex;
   flex-direction: column;
