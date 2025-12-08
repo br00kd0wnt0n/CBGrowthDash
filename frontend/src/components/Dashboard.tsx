@@ -1205,16 +1205,16 @@ export function Dashboard() {
                     {showPlatforms.Total && (<Line type="monotone" dataKey="Total" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} name="Total (Manual)">
                       <LabelList dataKey="Total" content={({x, y, index}: any) => index === (chartData?.length || 0) - 1 ? <text x={x + 5} y={y - 8} fill={SERIES_COLORS.total} fontSize={9} fontWeight={600}>Total</text> : null} />
                     </Line>)}
-                    {showPlatforms.Instagram && (<Line type="monotone" dataKey="Instagram" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} strokeDasharray="4 2">
+                    {showPlatforms.Instagram && (<Line type="monotone" dataKey="Instagram" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} strokeDasharray="6 4">
                       <LabelList dataKey="Instagram" content={({x, y, index}: any) => index === (chartData?.length || 0) - 1 ? <text x={x + 5} y={y + 3} fill={SERIES_COLORS.instagram} fontSize={9} fontWeight={600}>IG</text> : null} />
                     </Line>)}
-                    {showPlatforms.TikTok && (<Line type="monotone" dataKey="TikTok" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} strokeDasharray="3 3">
+                    {showPlatforms.TikTok && (<Line type="monotone" dataKey="TikTok" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} strokeDasharray="6 4">
                       <LabelList dataKey="TikTok" content={({x, y, index}: any) => index === (chartData?.length || 0) - 1 ? <text x={x + 5} y={y - 5} fill={SERIES_COLORS.tiktok} fontSize={9} fontWeight={600}>TT</text> : null} />
                     </Line>)}
-                    {showPlatforms.YouTube && (<Line type="monotone" dataKey="YouTube" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} strokeDasharray="6 3">
+                    {showPlatforms.YouTube && (<Line type="monotone" dataKey="YouTube" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} strokeDasharray="6 4">
                       <LabelList dataKey="YouTube" content={({x, y, index}: any) => index === (chartData?.length || 0) - 1 ? <text x={x + 5} y={y + 8} fill={SERIES_COLORS.youtube} fontSize={9} fontWeight={600}>YT</text> : null} />
                     </Line>)}
-                    {showPlatforms.Facebook && (<Line type="monotone" dataKey="Facebook" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} strokeDasharray="2 2">
+                    {showPlatforms.Facebook && (<Line type="monotone" dataKey="Facebook" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} strokeDasharray="6 4">
                       <LabelList dataKey="Facebook" content={({x, y, index}: any) => index === (chartData?.length || 0) - 1 ? <text x={x + 5} y={y + 12} fill={SERIES_COLORS.facebook} fontSize={9} fontWeight={600}>FB</text> : null} />
                     </Line>)}
                   </>
@@ -1223,19 +1223,19 @@ export function Dashboard() {
                   <>
                     {/* Historical - dashed lines for interpolated data (rendered first, behind solid) */}
                     {/* Only show labels on historical lines when in 'historical' mode, not 'both' */}
-                    {showPlatforms.Total && (<Line type="monotone" dataKey="Total_hist_all" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} strokeDasharray="4 4" strokeOpacity={0.5} name="Total (interpolated)" legendType="none">
+                    {showPlatforms.Total && (<Line type="monotone" dataKey="Total_hist_all" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} strokeDasharray="6 4" strokeOpacity={0.5} name="Total (interpolated)" legendType="none">
                       {chartMode === 'historical' && <LabelList dataKey="Total_hist_all" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y - 8} fill={SERIES_COLORS.total} fontSize={9} fontWeight={600}>Total</text> : null} />}
                     </Line>)}
-                    {showPlatforms.Instagram && (<Line type="monotone" dataKey="Instagram_hist_all" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} strokeDasharray="4 4" strokeOpacity={0.5} legendType="none">
+                    {showPlatforms.Instagram && (<Line type="monotone" dataKey="Instagram_hist_all" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} strokeDasharray="6 4" strokeOpacity={0.5} legendType="none">
                       {chartMode === 'historical' && <LabelList dataKey="Instagram_hist_all" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y + 3} fill={SERIES_COLORS.instagram} fontSize={9} fontWeight={600}>IG</text> : null} />}
                     </Line>)}
-                    {showPlatforms.TikTok && (<Line type="monotone" dataKey="TikTok_hist_all" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} strokeDasharray="4 4" strokeOpacity={0.5} legendType="none">
+                    {showPlatforms.TikTok && (<Line type="monotone" dataKey="TikTok_hist_all" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} strokeDasharray="6 4" strokeOpacity={0.5} legendType="none">
                       {chartMode === 'historical' && <LabelList dataKey="TikTok_hist_all" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y - 5} fill={SERIES_COLORS.tiktok} fontSize={9} fontWeight={600}>TT</text> : null} />}
                     </Line>)}
-                    {showPlatforms.YouTube && (<Line type="monotone" dataKey="YouTube_hist_all" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} strokeDasharray="4 4" strokeOpacity={0.5} legendType="none">
+                    {showPlatforms.YouTube && (<Line type="monotone" dataKey="YouTube_hist_all" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} strokeDasharray="6 4" strokeOpacity={0.5} legendType="none">
                       {chartMode === 'historical' && <LabelList dataKey="YouTube_hist_all" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y + 8} fill={SERIES_COLORS.youtube} fontSize={9} fontWeight={600}>YT</text> : null} />}
                     </Line>)}
-                    {showPlatforms.Facebook && (<Line type="monotone" dataKey="Facebook_hist_all" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} strokeDasharray="4 4" strokeOpacity={0.5} legendType="none">
+                    {showPlatforms.Facebook && (<Line type="monotone" dataKey="Facebook_hist_all" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} strokeDasharray="6 4" strokeOpacity={0.5} legendType="none">
                       {chartMode === 'historical' && <LabelList dataKey="Facebook_hist_all" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y + 12} fill={SERIES_COLORS.facebook} fontSize={9} fontWeight={600}>FB</text> : null} />}
                     </Line>)}
                     {/* Historical - solid lines for real data (rendered on top) */}
@@ -1249,31 +1249,31 @@ export function Dashboard() {
                 {chartMode==='both' && (
                   <>
                     {/* Forecast dashed continuation - labels shown at far right */}
-                    {showPlatforms.Total && (<Line type="monotone" dataKey="Total_forecast" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} strokeDasharray="6 6" name="Total (forecast)">
+                    {showPlatforms.Total && (<Line type="monotone" dataKey="Total_forecast" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} strokeDasharray="6 4" name="Total (forecast)">
                       <LabelList dataKey="Total_forecast" content={({x, y, index}: any) => {
                         const combinedLen = (followerHistory?.length || 0) + (chartData?.length || 0)
                         return index === combinedLen - 1 ? <text x={x + 5} y={y - 8} fill={SERIES_COLORS.total} fontSize={9} fontWeight={600}>Total</text> : null
                       }} />
                     </Line>)}
-                    {showPlatforms.Instagram && (<Line type="monotone" dataKey="Instagram_forecast" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} strokeDasharray="6 6">
+                    {showPlatforms.Instagram && (<Line type="monotone" dataKey="Instagram_forecast" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} strokeDasharray="6 4">
                       <LabelList dataKey="Instagram_forecast" content={({x, y, index}: any) => {
                         const combinedLen = (followerHistory?.length || 0) + (chartData?.length || 0)
                         return index === combinedLen - 1 ? <text x={x + 5} y={y + 3} fill={SERIES_COLORS.instagram} fontSize={9} fontWeight={600}>IG</text> : null
                       }} />
                     </Line>)}
-                    {showPlatforms.TikTok && (<Line type="monotone" dataKey="TikTok_forecast" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} strokeDasharray="6 6">
+                    {showPlatforms.TikTok && (<Line type="monotone" dataKey="TikTok_forecast" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} strokeDasharray="6 4">
                       <LabelList dataKey="TikTok_forecast" content={({x, y, index}: any) => {
                         const combinedLen = (followerHistory?.length || 0) + (chartData?.length || 0)
                         return index === combinedLen - 1 ? <text x={x + 5} y={y - 5} fill={SERIES_COLORS.tiktok} fontSize={9} fontWeight={600}>TT</text> : null
                       }} />
                     </Line>)}
-                    {showPlatforms.YouTube && (<Line type="monotone" dataKey="YouTube_forecast" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} strokeDasharray="6 6">
+                    {showPlatforms.YouTube && (<Line type="monotone" dataKey="YouTube_forecast" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} strokeDasharray="6 4">
                       <LabelList dataKey="YouTube_forecast" content={({x, y, index}: any) => {
                         const combinedLen = (followerHistory?.length || 0) + (chartData?.length || 0)
                         return index === combinedLen - 1 ? <text x={x + 5} y={y + 8} fill={SERIES_COLORS.youtube} fontSize={9} fontWeight={600}>YT</text> : null
                       }} />
                     </Line>)}
-                    {showPlatforms.Facebook && (<Line type="monotone" dataKey="Facebook_forecast" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} strokeDasharray="6 6">
+                    {showPlatforms.Facebook && (<Line type="monotone" dataKey="Facebook_forecast" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} strokeDasharray="6 4">
                       <LabelList dataKey="Facebook_forecast" content={({x, y, index}: any) => {
                         const combinedLen = (followerHistory?.length || 0) + (chartData?.length || 0)
                         return index === combinedLen - 1 ? <text x={x + 5} y={y + 12} fill={SERIES_COLORS.facebook} fontSize={9} fontWeight={600}>FB</text> : null
