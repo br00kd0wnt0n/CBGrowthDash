@@ -83,10 +83,10 @@ export function Dashboard() {
   // Confidence band totals (per month)
   const [bandHigh, setBandHigh] = useState<number[] | null>(null) // optimistic (CPF min)
   const [bandLow, setBandLow] = useState<number[] | null>(null)   // pessimistic (CPF max)
-  const [showCPFBand, setShowCPFBand] = useState(true) // toggle for CPF range visualization
+  const [showCPFBand, setShowCPFBand] = useState(false) // toggle for CPF range visualization - OFF by default
   // Followers history for combined chart and mode toggle
   const [followerHistory, setFollowerHistory] = useState<any[] | null>(null)
-  const [chartMode, setChartMode] = useState<'historical'|'forecast'|'both'>('both')
+  const [chartMode, setChartMode] = useState<'historical'|'forecast'|'both'>('historical') // HIST view by default
   // Platform visibility toggles
   const [showPlatforms, setShowPlatforms] = useState<{Total:boolean; Instagram:boolean; TikTok:boolean; YouTube:boolean; Facebook:boolean}>({
     Total: true,
@@ -96,7 +96,7 @@ export function Dashboard() {
     Facebook: true,
   })
   // Collapsible sections
-  const [historicalCollapsed, setHistoricalCollapsed] = useState<boolean>(true)
+  const [historicalCollapsed, setHistoricalCollapsed] = useState<boolean>(false) // Historical Context open by default
   // Sidebar section collapse states
   const [sidebarCollapsed, setSidebarCollapsed] = useState<{[key:string]:boolean}>({
     strategy: true,
