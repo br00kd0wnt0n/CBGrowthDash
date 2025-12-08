@@ -1172,10 +1172,17 @@ export function Dashboard() {
                     }
 
                     // Clean up the dataKey name for display
+                    const isHistorical = name.includes('_hist')
                     let displayName = name
-                      .replace('_hist_all', ' (est.)')
+                      .replace('_hist_all', '')
                       .replace('_hist', '')
                       .replace('_forecast', '')
+                    // Add suffix based on data type
+                    if (isHistorical) {
+                      displayName += ' (actual)'
+                    } else {
+                      displayName += ' (projected)'
+                    }
                     return [(value / 1000).toFixed(0) + 'K', displayName]
                   }}
                 />
