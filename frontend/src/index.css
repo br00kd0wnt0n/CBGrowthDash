@@ -10,7 +10,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #fef5f7 0%, #fff9f0 100%);
+  background: linear-gradient(135deg, #b8b0b2 0%, #bdb7ad 100%);
   color: #2d3748;
   min-height: 100vh;
 }
@@ -37,9 +37,9 @@ body {
 
   /* Background colors */
   --bg-primary: #ffffff;
-  --bg-secondary: #fef5f7;
-  --bg-tertiary: #fff9f0;
-  --bg-gradient: linear-gradient(135deg, #fef5f7 0%, #fff9f0 100%);
+  --bg-secondary: #fafafa;
+  --bg-tertiary: #f5f5f5;
+  --bg-gradient: linear-gradient(135deg, #b8b0b2 0%, #bdb7ad 100%);
 
   /* Text colors */
   --text-primary: #2d3748;

@@ -24,7 +24,8 @@ def analyze_strategy(
     platform_allocation: Dict[str, int],
     months: int,
     preset: str,
-    historical_data: Dict[str, Any]
+    historical_data: Dict[str, Any],
+    budget_info: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     Analyze the current strategy and provide AI recommendations
@@ -34,24 +35,45 @@ def analyze_strategy(
 
     # Calculate current metrics
     total_followers = sum(current_followers.values())
-    goal = total_followers * 2
+    goal = total_followers * 2  # Double the followers
+
+    # Budget info defaults
+    if budget_info is None:
+        budget_info = {
+            "total_annual_budget": 100000,
+            "paid_media_weekly": 641,
+            "growth_strategy_weekly": 1282,
+            "cpf_range": {"min": 0.50, "mid": 0.75, "max": 1.00}
+        }
+
+    annual_budget = budget_info.get("total_annual_budget", 100000)
+    paid_weekly = budget_info.get("paid_media_weekly", 962)
+    growth_weekly = budget_info.get("growth_strategy_weekly", 962)
+    cpf = budget_info.get("cpf_range", {"min": 3, "mid": 4, "max": 5})
 
     # Build context for AI
     context = f"""
-You are a social media growth strategist analyzing a campaign for Care Bears.
+You are an expert social media growth strategist analyzing a campaign for Care Bears.
 
-CURRENT SITUATION:
+PRIMARY OBJECTIVE: Double total followers from {total_followers:,} to {goal:,} within 12 months.
+
+CURRENT CONFIGURATION:
 - Total Followers: {total_followers:,}
-- 12-Month Goal: {goal:,} (double current)
-- Current Strategy: {preset}
+- 12-Month Goal: {goal:,} (2x current)
+- Strategy Preset: {preset}
 - Posts per Week: {posts_per_week}
-- Platform Distribution: {platform_allocation}
+- Forecast Period: {months} months
+
+BUDGET ALLOCATION (Annual: ${annual_budget:,}):
+- Paid Media Budget: ${paid_weekly:,}/week (${paid_weekly * 52:,}/year)
+- Growth Strategy Budget: ${growth_weekly:,}/week (${growth_weekly * 52:,}/year)
+- Cost Per Follower (CPF): ${cpf['min']}-${cpf['max']} (target: ${cpf['mid']})
 
 PLATFORM BREAKDOWN:
 """
     for platform, count in current_followers.items():
-        percentage = (count / total_followers) * 100
-        context += f"- {platform}: {count:,} followers ({percentage:.1f}% of total)\n"
+        percentage = (count / total_followers) * 100 if total_followers > 0 else 0
+        context += f"- {platform}: {count:,} followers ({percentage:.1f}%)\n"
 
     context += f"""
 CURRENT POSTING ALLOCATION:
@@ -60,29 +82,38 @@ CURRENT POSTING ALLOCATION:
         posts = int((posts_per_week * pct) / 100)
         context += f"- {platform}: {pct}% ({posts} posts/week)\n"
 
+    # Calculate what's needed to double
+    followers_needed = goal - total_followers
+    weeks_in_period = months * 4
+    followers_per_week_needed = followers_needed / weeks_in_period if weeks_in_period > 0 else 0
+
+    context += f"""
+GROWTH MATH:
+- Followers needed to reach goal: {followers_needed:,}
+- Weeks in forecast period: {weeks_in_period}
+- Required weekly growth: ~{int(followers_per_week_needed):,} followers/week
+- At ${cpf['mid']} CPF, budget supports ~{int((paid_weekly + growth_weekly) / cpf['mid']):,} paid followers/week
+- Organic growth must make up the remainder
+
+"""
+
     prompt = context + """
 TASK:
-Analyze this strategy and provide 3 alternative scenarios:
-1. OPTIMIZED: Balanced approach for steady growth
-2. AGGRESSIVE: Higher risk, faster growth potential
-3. CONSERVATIVE: Lower risk, sustainable growth
+Analyze this configuration and provide 3 strategic scenarios that can realistically achieve the goal of DOUBLING followers within 12 months given the $100K annual budget:
 
-For each scenario, provide:
-- Recommended posts per week (14-50 range)
-- Platform allocation percentages (must sum to 100%)
-- Brief reasoning (2-3 sentences)
-- Risk level (LOW/MEDIUM/HIGH)
-- Expected outcome vs goal
+1. OPTIMIZED: Best balance of organic and paid growth
+2. AGGRESSIVE: Maximum growth potential, higher spend efficiency needed
+3. CONSERVATIVE: Lower risk, sustainable path to goal
 
-IMPORTANT:
-- Consider that oversaturation (>35 posts/week) can reduce engagement quality
-- Different platforms have different optimal posting frequencies
-- Account for audience overlap between platforms
-- Balance reach expansion with engagement quality
+For each scenario, consider:
+- How to allocate the $100K budget most effectively
+- Which platforms offer best CPF (cost per follower) efficiency
+- Optimal posting frequency to maximize organic reach without oversaturation
+- Content mix recommendations (Short Video, Carousels, Stories, etc.)
 
 Return ONLY valid JSON in this exact format:
 {
-    "analysis": "Overall assessment of current strategy in 2-3 sentences",
+    "analysis": "2-3 sentence assessment of whether current configuration can achieve 2x growth goal. Be specific about gaps or strengths.",
     "scenarios": [
         {
             "name": "Optimized",
@@ -93,16 +124,16 @@ Return ONLY valid JSON in this exact format:
                 "YouTube": 15,
                 "Facebook": 15
             },
-            "reasoning": "Brief explanation of why this works",
+            "reasoning": "Specific explanation of budget allocation and why this achieves the 2x goal",
             "risk_level": "MEDIUM",
-            "expected_outcome": "95% of goal"
+            "expected_outcome": "105% of goal - exceeds target by 5%"
         },
-        ...two more scenarios...
+        ...two more scenarios (Aggressive, Conservative)...
     ],
     "key_insights": [
-        "Insight 1",
-        "Insight 2",
-        "Insight 3"
+        "Specific, actionable insight about budget allocation",
+        "Platform-specific recommendation with numbers",
+        "Content strategy insight tied to growth goal"
     ]
 }
 """

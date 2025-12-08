@@ -65,7 +65,7 @@ PAID_FUNNEL_DEFAULT = {
 }
 
 # Cost-per-follower default ranges (USD)
-CPF_DEFAULT = {"min": 3.0, "mid": 4.0, "max": 5.0}
+CPF_DEFAULT = {"min": 0.50, "mid": 0.75, "max": 1.00}
 
 
 def saturating_effect(freq_per_week: float, half_sat: float) -> float:
@@ -252,7 +252,7 @@ def forecast_growth(
             rates = paid_funnel.get(p, PAID_FUNNEL_DEFAULT[p])
             paid_follows = paid_impr * rates.get("vtr", 0.3) * rates.get("er", 0.02) * rates.get("fcr", 0.01)
             # modestly scale by content suitability
-            paid_follows *= (0.8 + 0.2 * content_mult)
+            paid_follows *= (0.8 + 0.2 * c_mult)
 
             # Budget-driven direct CPF followers (mid case); allocate by platform
             paid_budget_follows = 0.0

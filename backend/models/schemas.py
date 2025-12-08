@@ -69,6 +69,15 @@ class ForecastRequest(BaseModel):
         default=None,
         description="Optional override path to the Excel workbook (defaults to public/Care Bears Audience Growth KPis .xlsx)."
     )
+    # AI context fields (passed from frontend for better recommendations)
+    projected_total: Optional[float] = Field(
+        default=None,
+        description="Current projected total followers from forecast"
+    )
+    goal_followers: Optional[float] = Field(
+        default=None,
+        description="User's goal follower count"
+    )
 
 
 class MonthlyForecast(BaseModel):

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { LineChart, ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { LineChart, ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, LabelList } from 'recharts'
 import { api, type HistoricalDataResponse, type ForecastRequest, type ForecastResponse, type AIInsightsResponse, type AIScenario } from '../services/api'
 import './Dashboard.css'
 
@@ -39,7 +39,7 @@ export function Dashboard() {
     YouTube: 381000,
     Facebook: 590000
   })
-  const [postsPerWeek, setPostsPerWeek] = useState(28)
+  const [postsPerWeek, setPostsPerWeek] = useState(40)
   const [platformAllocation, setPlatformAllocation] = useState({
     Instagram: 35,
     TikTok: 35,
@@ -56,7 +56,7 @@ export function Dashboard() {
   const [months, setMonths] = useState(12)
   // Paid funnel (CPM) state
   const [enablePaid, setEnablePaid] = useState(false)
-  const [paidFunnelBudgetWeek, setPaidFunnelBudgetWeek] = useState(0)
+  const [paidFunnelBudgetWeek, setPaidFunnelBudgetWeek] = useState(2500)
   const [paidCPM, setPaidCPM] = useState(10)
   const [paidAllocation, setPaidAllocation] = useState({
     Instagram: 35,
@@ -65,13 +65,13 @@ export function Dashboard() {
     Facebook: 15
   })
   // Budget & CPF state
-  const [enableBudget, setEnableBudget] = useState(false)
-  const [paidBudgetWeek, setPaidBudgetWeek] = useState(0)
-  const [creatorBudgetWeek, setCreatorBudgetWeek] = useState(0)
-  const [acquisitionBudgetWeek, setAcquisitionBudgetWeek] = useState(0)
-  const [cpfMin, setCpfMin] = useState(3)
-  const [cpfMid, setCpfMid] = useState(4)
-  const [cpfMax, setCpfMax] = useState(5)
+  const [enableBudget, setEnableBudget] = useState(true)
+  const [paidBudgetWeek, setPaidBudgetWeek] = useState(641)        // ~$33.3k/year
+  const [creatorBudgetWeek, setCreatorBudgetWeek] = useState(641)   // ~$33.3k/year
+  const [acquisitionBudgetWeek, setAcquisitionBudgetWeek] = useState(641) // ~$33.3k/year (total = $100k/year)
+  const [cpfMin, setCpfMin] = useState(0.50)
+  const [cpfMid, setCpfMid] = useState(0.75)
+  const [cpfMax, setCpfMax] = useState(1.00)
   const [valuePerFollower, setValuePerFollower] = useState(0)
 
   // AI Insights state
@@ -96,16 +96,16 @@ export function Dashboard() {
   // Month selector for acquisition breakdown
   const [selectedBreakdownIndex, setSelectedBreakdownIndex] = useState<number>(0)
   // Collapsible sections
-  const [historicalCollapsed, setHistoricalCollapsed] = useState<boolean>(false)
+  const [historicalCollapsed, setHistoricalCollapsed] = useState<boolean>(true)
   // Sidebar section collapse states
   const [sidebarCollapsed, setSidebarCollapsed] = useState<{[key:string]:boolean}>({
-    strategy: false,
-    followers: false,
-    platform: false,
-    contentMix: false,
+    strategy: true,
+    followers: true,
+    platform: true,
+    contentMix: true,
     paidMedia: true,
     budget: true,
-    aiInsights: false,
+    aiInsights: true,
     advanced: true,
   })
 
@@ -270,13 +270,22 @@ export function Dashboard() {
       // Compute impressions from CPM if enabled
       const computedImpr = enablePaid && paidCPM > 0 ? Math.round((paidFunnelBudgetWeek / paidCPM) * 1000) : 0
 
+      // Build full request with budget and projection context
       const request: ForecastRequest = {
         current_followers: currentFollowers,
         posts_per_week_total: postsPerWeek,
         platform_allocation: platformAllocation,
         content_mix_by_platform: contentMix,
         months,
-        preset
+        preset,
+        // Include budget info for AI context
+        paid_budget_per_week_total: enableBudget ? paidBudgetWeek : 0,
+        creator_budget_per_week_total: enableBudget ? creatorBudgetWeek : 0,
+        acquisition_budget_per_week_total: enableBudget ? acquisitionBudgetWeek : 0,
+        cpf_paid: { min: cpfMin, mid: cpfMid, max: cpfMax },
+        // Pass projections for AI context (added as extra fields)
+        ...(projectedTotal ? { _projected_total: projectedTotal } : {}),
+        ...(goalFollowers ? { _goal_followers: goalFollowers } : {}),
       }
 
       const insights = await api.getAIInsights(request)
@@ -381,7 +390,13 @@ export function Dashboard() {
   }
 
   const toggleSidebarSection = (key: string) => {
+    const willExpand = sidebarCollapsed[key as keyof typeof sidebarCollapsed]
     setSidebarCollapsed(prev => ({ ...prev, [key]: !prev[key] }))
+
+    // Auto-fetch AI insights when expanding the AI section
+    if (key === 'aiInsights' && willExpand && !aiLoading && !aiInsights) {
+      getAIRecommendations()
+    }
   }
 
   const updatePlatformAllocation = (platform: string, value: number) => {
@@ -404,9 +419,12 @@ export function Dashboard() {
   }
 
   // Chart data - combine manual + visible scenarios + individual platforms
+  // Forecast starts Jan 2026, runs 12 months through Dec 2026
+  const FORECAST_MONTH_LABELS = ['Jan 2026', 'Feb 2026', 'Mar 2026', 'Apr 2026', 'May 2026', 'Jun 2026',
+                                  'Jul 2026', 'Aug 2026', 'Sep 2026', 'Oct 2026', 'Nov 2026', 'Dec 2026']
   const chartData = forecastResults?.monthly_data.map((item, idx) => {
     const dataPoint: any = {
-      month: `M${item.month}`,
+      month: FORECAST_MONTH_LABELS[idx] || `M${item.month}`,
       Total: Math.round(item.total),
       Instagram: Math.round(item.Instagram),
       TikTok: Math.round(item.TikTok),
@@ -525,366 +543,385 @@ export function Dashboard() {
       <div className="dashboard-grid">
         {/* Left Panel: Controls */}
         <div className="control-panel">
-          <div className="panel-section">
+          <div className={`panel-section ${sidebarCollapsed.strategy ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('strategy')}>
               <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.strategy ? 'collapsed' : ''}`}>▾</span>
-                <span className="step-badge">1</span> Strategy Controls
+                <span className={`collapse-icon ${sidebarCollapsed.strategy ? 'collapsed' : ''}`}>{sidebarCollapsed.strategy ? '+' : '−'}</span>
+                Controls
               </div>
-              <HelpTooltip text="Adjust posting frequency, timeline, and strategy approach to test different growth scenarios" />
+              {sidebarCollapsed.strategy ? (
+                <div className="collapsed-summary">{postsPerWeek} posts/wk • {months}mo</div>
+              ) : (
+                <HelpTooltip text="Adjust posting frequency, timeline, and strategy approach to test different growth scenarios" />
+              )}
             </div>
-            {sidebarCollapsed.strategy ? (
-              <div className="collapsed-summary">{postsPerWeek} posts/wk • {months}mo • {preset}</div>
-            ) : (
-            <>
-            <div className="control-group">
-              <label>Posts Per Week</label>
-              <input
-                type="range"
-                min="14"
-                max="50"
-                value={postsPerWeek}
-                onChange={e => setPostsPerWeek(parseInt(e.target.value))}
-                className="slider"
-              />
-              <div className="control-value">{postsPerWeek} posts/week</div>
-            </div>
+            <div className={`section-content ${sidebarCollapsed.strategy ? 'collapsed' : ''}`}>
+              <div className="section-content-inner">
+                <div className="control-group">
+                  <label>Posts Per Week</label>
+                  <input
+                    type="range"
+                    min="14"
+                    max="50"
+                    value={postsPerWeek}
+                    onChange={e => setPostsPerWeek(parseInt(e.target.value))}
+                    className="slider"
+                  />
+                  <div className="control-value">{postsPerWeek} posts/week</div>
+                </div>
 
-            <div className="control-group">
-              <label>Forecast Period</label>
-              <input
-                type="range"
-                min="3"
-                max="24"
-                value={months}
-                onChange={e => setMonths(parseInt(e.target.value))}
-                className="slider"
-              />
-              <div className="control-value">{months} months</div>
-            </div>
+                <div className="control-group">
+                  <label>Forecast Period</label>
+                  <input
+                    type="range"
+                    min="3"
+                    max="24"
+                    value={months}
+                    onChange={e => setMonths(parseInt(e.target.value))}
+                    className="slider"
+                  />
+                  <div className="control-value">{months} months</div>
+                </div>
 
-            <div className="control-group">
-              <label>
-                Strategy Preset
-                <HelpTooltip text="Conservative: Safe approach with lower growth (60% acquisition rate, no campaign boost). Balanced: Standard growth with moderate risk (100% acquisition, 15% campaign lift). Ambitious: Aggressive growth strategy (150% acquisition, 35% campaign lift, higher engagement sensitivity)." />
-              </label>
-              <select value={preset} onChange={e => setPreset(e.target.value)} className="preset-select">
-                <option>Conservative</option>
-                <option>Balanced</option>
-                <option>Ambitious</option>
-              </select>
+                <div className="control-group">
+                  <label>
+                    Strategy Preset
+                    <HelpTooltip text="Conservative: Safe approach with lower growth (60% acquisition rate, no campaign boost). Balanced: Standard growth with moderate risk (100% acquisition, 15% campaign lift). Ambitious: Aggressive growth strategy (150% acquisition, 35% campaign lift, higher engagement sensitivity)." />
+                  </label>
+                  <select value={preset} onChange={e => setPreset(e.target.value)} className="preset-select">
+                    <option>Conservative</option>
+                    <option>Balanced</option>
+                    <option>Ambitious</option>
+                  </select>
+                </div>
+              </div>
             </div>
-            </>
-            )}
           </div>
 
           {/* Assumptions moved to Advanced at bottom */}
           {/* Repositioned: Paid Media and Budget panels after Content Mix */}
-          <div className="panel-section">
+          <div className={`panel-section ${sidebarCollapsed.paidMedia ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('paidMedia')}>
               <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.paidMedia ? 'collapsed' : ''}`}>▾</span>
-                <span className="step-badge">5</span> Paid Media
+                <span className={`collapse-icon ${sidebarCollapsed.paidMedia ? 'collapsed' : ''}`}>{sidebarCollapsed.paidMedia ? '+' : '−'}</span>
+                Paid Media
               </div>
-              <HelpTooltip text="Optional: Include paid impressions per week and how they are allocated by platform. Uses industry conversion defaults (imp → views → engagements → follows)." />
+              {sidebarCollapsed.paidMedia ? (
+                <div className="collapsed-summary">{enablePaid ? `$${paidFunnelBudgetWeek}/wk` : 'Off'}</div>
+              ) : (
+                <HelpTooltip text="Optional: Include paid impressions per week and how they are allocated by platform. Uses industry conversion defaults (imp → views → engagements → follows)." />
+              )}
             </div>
-            {sidebarCollapsed.paidMedia ? (
-              <div className="collapsed-summary">{enablePaid ? `$${paidFunnelBudgetWeek}/wk @ $${paidCPM} CPM` : 'Disabled'}</div>
-            ) : (
-            <>
-            <div className="control-group" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-              <label>Enable Paid Media</label>
-              <input type="checkbox" checked={enablePaid} onChange={e=>setEnablePaid(e.target.checked)} />
-            </div>
-            {enablePaid && (
-              <>
-                <div className="control-group">
-                  <label>Paid Funnel Budget / Week (USD)</label>
-                  <input type="number" min={0} step={100} value={paidFunnelBudgetWeek} onChange={e=>setPaidFunnelBudgetWeek(parseInt(e.target.value)||0)} className="follower-input" />
+            <div className={`section-content ${sidebarCollapsed.paidMedia ? 'collapsed' : ''}`}>
+              <div className="section-content-inner">
+                <div className="control-group" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                  <label>Enable Paid Media</label>
+                  <input type="checkbox" checked={enablePaid} onChange={e=>setEnablePaid(e.target.checked)} />
                 </div>
-                <div className="control-group">
-                  <label>CPM (USD per 1000 impressions)</label>
-                  <input type="number" min={1} step={0.5} value={paidCPM} onChange={e=>setPaidCPM(parseFloat(e.target.value)||0)} className="follower-input" />
-                  <div className="ai-note">Impressions/week = (Paid Funnel Budget / CPM) × 1000</div>
-                </div>
-                <div className="control-group">
-                  <label>Paid Allocation (must total 100%)</label>
-                  {Object.keys(paidAllocation).map(platform => (
-                    <div key={platform} className="platform-control">
-                      <div className="platform-header">
-                        <span className="platform-name">{platform}</span>
-                        <span className="platform-percent">{paidAllocation[platform as keyof typeof paidAllocation]}%</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={paidAllocation[platform as keyof typeof paidAllocation]}
-                        onChange={e => {
-                          const val = parseInt(e.target.value)
-                          setPaidAllocation(prev => ({...prev, [platform]: val}))
-                        }}
-                        className="slider platform-slider"
-                      />
+                {enablePaid && (
+                  <>
+                    <div className="control-group">
+                      <label>Paid Funnel Budget / Week (USD)</label>
+                      <input type="number" min={0} step={100} value={paidFunnelBudgetWeek} onChange={e=>setPaidFunnelBudgetWeek(parseInt(e.target.value)||0)} className="follower-input" />
                     </div>
-                  ))}
-                  <div className="ai-note">Tip: Defaults mirror your organic platform allocation. Impressions are derived from CPM × Budget.</div>
-                </div>
-              </>
-            )}
-            </>
-            )}
+                    <div className="control-group">
+                      <label>CPM (Cost Per Mille)</label>
+                      <input type="number" min={1} step={0.5} value={paidCPM} onChange={e=>setPaidCPM(parseFloat(e.target.value)||0)} className="follower-input" />
+                      <div className="ai-note">Cost per 1,000 ad impressions. ${paidFunnelBudgetWeek} ÷ ${paidCPM} CPM = {((paidFunnelBudgetWeek / paidCPM) * 1000 / 1000).toFixed(0)}K impressions/week</div>
+                    </div>
+                    <div className="control-group">
+                      <label>Paid Allocation (must total 100%)</label>
+                      {Object.keys(paidAllocation).map(platform => (
+                        <div key={platform} className="platform-control">
+                          <div className="platform-header">
+                            <span className="platform-name">{platform}</span>
+                            <span className="platform-percent">{paidAllocation[platform as keyof typeof paidAllocation]}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={paidAllocation[platform as keyof typeof paidAllocation]}
+                            onChange={e => {
+                              const val = parseInt(e.target.value)
+                              setPaidAllocation(prev => ({...prev, [platform]: val}))
+                            }}
+                            className="slider platform-slider"
+                          />
+                        </div>
+                      ))}
+                      <div className="ai-note">Tip: Defaults mirror your organic platform allocation. Impressions are derived from CPM × Budget.</div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
 
-          <div className="panel-section">
+          <div className={`panel-section ${sidebarCollapsed.budget ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('budget')}>
               <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.budget ? 'collapsed' : ''}`}>▾</span>
-                <span className="step-badge">6</span> Growth Strategy & Metrics
+                <span className={`collapse-icon ${sidebarCollapsed.budget ? 'collapsed' : ''}`}>{sidebarCollapsed.budget ? '+' : '−'}</span>
+                Growth Strategy
               </div>
-              <HelpTooltip text="Budget-based predictive modeling using cost-per-follower (CPF) ranges. Defaults to $3–$5 across paid, creator, acquisition." />
+              {sidebarCollapsed.budget ? (
+                <div className="collapsed-summary">{enableBudget ? `$${paidBudgetWeek + creatorBudgetWeek + acquisitionBudgetWeek}/wk` : 'Off'}</div>
+              ) : (
+                <HelpTooltip text="Budget-based predictive modeling using cost-per-follower (CPF) ranges. Defaults to $3–$5 across paid, creator, acquisition." />
+              )}
             </div>
-            {sidebarCollapsed.budget ? (
-              <div className="collapsed-summary">{enableBudget ? `$${paidBudgetWeek + creatorBudgetWeek + acquisitionBudgetWeek}/wk • $${cpfMid} CPF` : 'Disabled'}</div>
-            ) : (
-            <>
-            <div className="control-group" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-              <label>Enable Budget Model</label>
-              <input type="checkbox" checked={enableBudget} onChange={e=>setEnableBudget(e.target.checked)} />
+            <div className={`section-content ${sidebarCollapsed.budget ? 'collapsed' : ''}`}>
+              <div className="section-content-inner">
+                <div className="control-group" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                  <label>Enable Budget Model</label>
+                  <input type="checkbox" checked={enableBudget} onChange={e=>setEnableBudget(e.target.checked)} />
+                </div>
+                {enableBudget && (
+                  <>
+                    <div className="control-group">
+                      <label>Paid Boosting Budget / Week (USD)</label>
+                      <input type="number" min={0} step={100} value={paidBudgetWeek} onChange={e=>setPaidBudgetWeek(parseInt(e.target.value)||0)} className="follower-input" />
+                    </div>
+                    <div className="control-group">
+                      <label>Creator Budget / Week (USD)</label>
+                      <input type="number" min={0} step={100} value={creatorBudgetWeek} onChange={e=>setCreatorBudgetWeek(parseInt(e.target.value)||0)} className="follower-input" />
+                    </div>
+                    <div className="control-group">
+                      <label>Acquisition Budget / Week (USD)</label>
+                      <input type="number" min={0} step={100} value={acquisitionBudgetWeek} onChange={e=>setAcquisitionBudgetWeek(parseInt(e.target.value)||0)} className="follower-input" />
+                    </div>
+                    <div className="control-group">
+                      <label>Cost per Follower (range)</label>
+                      <div className="cpf-grid" style={{marginBottom:'6px', opacity:0.8, fontSize:'0.75rem', color:'var(--text-secondary)'}}>
+                        <div style={{textAlign:'center'}}>Min</div>
+                        <div style={{textAlign:'center'}}>Mid (used)</div>
+                        <div style={{textAlign:'center'}}>Max</div>
+                      </div>
+                      <div className="cpf-grid">
+                        <div className="input-prefix-group"><span className="prefix">$</span><input type="number" step={0.1} value={cpfMin} onChange={e=>setCpfMin(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Min" /></div>
+                        <div className="input-prefix-group"><span className="prefix">$</span><input type="number" step={0.1} value={cpfMid} onChange={e=>setCpfMid(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Mid" /></div>
+                        <div className="input-prefix-group"><span className="prefix">$</span><input type="number" step={0.1} value={cpfMax} onChange={e=>setCpfMax(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Max" /></div>
+                      </div>
+                      <div className="ai-note">Use ranges to frame outcomes rather than a single point prediction.</div>
+                    </div>
+                    <div className="control-group">
+                      <label>Value per New Follower (USD)</label>
+                      <div className="input-prefix-group">
+                        <span className="prefix">$</span>
+                        <input type="number" min={0} step={0.1} value={valuePerFollower} onChange={e=>setValuePerFollower(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="per follower" />
+                      </div>
+                      <div className="ai-note">Used to estimate ROI at the top level.</div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-            {enableBudget && (
-              <>
-                <div className="control-group">
-                  <label>Paid Boosting Budget / Week (USD)</label>
-                  <input type="number" min={0} step={100} value={paidBudgetWeek} onChange={e=>setPaidBudgetWeek(parseInt(e.target.value)||0)} className="follower-input" />
-                </div>
-                <div className="control-group">
-                  <label>Creator Budget / Week (USD)</label>
-                  <input type="number" min={0} step={100} value={creatorBudgetWeek} onChange={e=>setCreatorBudgetWeek(parseInt(e.target.value)||0)} className="follower-input" />
-                </div>
-                <div className="control-group">
-                  <label>Acquisition Budget / Week (USD)</label>
-                  <input type="number" min={0} step={100} value={acquisitionBudgetWeek} onChange={e=>setAcquisitionBudgetWeek(parseInt(e.target.value)||0)} className="follower-input" />
-                </div>
-                <div className="control-group">
-                  <label>Cost per Follower (range)</label>
-                  <div className="cpf-grid" style={{marginBottom:'6px', opacity:0.8, fontSize:'0.75rem', color:'var(--text-secondary)'}}>
-                    <div style={{textAlign:'center'}}>Min</div>
-                    <div style={{textAlign:'center'}}>Mid (used)</div>
-                    <div style={{textAlign:'center'}}>Max</div>
-                  </div>
-                  <div className="cpf-grid">
-                    <div className="input-prefix-group"><span className="prefix">$</span><input type="number" step={0.1} value={cpfMin} onChange={e=>setCpfMin(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Min" /></div>
-                    <div className="input-prefix-group"><span className="prefix">$</span><input type="number" step={0.1} value={cpfMid} onChange={e=>setCpfMid(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Mid" /></div>
-                    <div className="input-prefix-group"><span className="prefix">$</span><input type="number" step={0.1} value={cpfMax} onChange={e=>setCpfMax(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="Max" /></div>
-                  </div>
-                  <div className="ai-note">Use ranges to frame outcomes rather than a single point prediction.</div>
-                </div>
-                <div className="control-group">
-                  <label>Value per New Follower (USD)</label>
-                  <div className="input-prefix-group">
-                    <span className="prefix">$</span>
-                    <input type="number" min={0} step={0.1} value={valuePerFollower} onChange={e=>setValuePerFollower(parseFloat(e.target.value)||0)} className="follower-input cpf-input" placeholder="per follower" />
-                  </div>
-                  <div className="ai-note">Used to estimate ROI at the top level.</div>
-                </div>
-              </>
-            )}
-            </>
-            )}
           </div>
           {/* Paid Media panel moved below Content Mix for a more natural workflow */}
 
           {/* Growth Strategy & Metrics panel moved below Content Mix */}
 
-          <div className="panel-section">
+          <div className={`panel-section ${sidebarCollapsed.followers ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('followers')}>
               <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.followers ? 'collapsed' : ''}`}>▾</span>
-                <span className="step-badge">2</span> Current Followers
+                <span className={`collapse-icon ${sidebarCollapsed.followers ? 'collapsed' : ''}`}>{sidebarCollapsed.followers ? '+' : '−'}</span>
+                Current Followers
               </div>
-              <HelpTooltip text="Enter the current follower count for each platform. These are your starting numbers for the forecast." />
+              {sidebarCollapsed.followers ? (
+                <div className="collapsed-summary">{(totalFollowers/1000000).toFixed(1)}M</div>
+              ) : (
+                <HelpTooltip text="Enter the current follower count for each platform. These are your starting numbers for the forecast." />
+              )}
             </div>
-            {sidebarCollapsed.followers ? (
-              <div className="collapsed-summary">{(totalFollowers/1000000).toFixed(2)}M total</div>
-            ) : (
-              <>
-              {Object.keys(currentFollowers).map(platform => (
-                <div key={platform} className="follower-input-group">
-                  <label className="platform-name">{platform}</label>
-                  <input
-                    type="number"
-                    value={currentFollowers[platform as keyof typeof currentFollowers]}
-                    onChange={e => updateFollowerCount(platform, e.target.value)}
-                    className="follower-input"
-                  />
-                </div>
-              ))}
-              </>
-            )}
+            <div className={`section-content ${sidebarCollapsed.followers ? 'collapsed' : ''}`}>
+              <div className="section-content-inner">
+                {Object.keys(currentFollowers).map(platform => (
+                  <div key={platform} className="follower-input-group">
+                    <label className="platform-name">{platform}</label>
+                    <input
+                      type="number"
+                      value={currentFollowers[platform as keyof typeof currentFollowers]}
+                      onChange={e => updateFollowerCount(platform, e.target.value)}
+                      className="follower-input"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="panel-section">
+          <div className={`panel-section ${sidebarCollapsed.platform ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('platform')}>
               <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.platform ? 'collapsed' : ''}`}>▾</span>
-                <span className="step-badge">3</span> Platform Allocation
+                <span className={`collapse-icon ${sidebarCollapsed.platform ? 'collapsed' : ''}`}>{sidebarCollapsed.platform ? '+' : '−'}</span>
+                Platform Allocation
               </div>
-              <HelpTooltip text="Set what percentage of your total weekly posts go to each platform. Must total 100%." />
+              {sidebarCollapsed.platform ? (
+                <div className="collapsed-summary">{Object.entries(platformAllocation).map(([p,v]) => `${p.slice(0,2)}:${v}%`).join(' ')}</div>
+              ) : (
+                <HelpTooltip text="Set what percentage of your total weekly posts go to each platform. Must total 100%." />
+              )}
             </div>
-            {sidebarCollapsed.platform ? (
-              <div className="collapsed-summary">{Object.entries(platformAllocation).map(([p,v]) => `${p.slice(0,2)}:${v}%`).join(' ')}</div>
-            ) : (
-              <>
-              {Object.keys(platformAllocation).map(platform => (
-                <div key={platform} className="platform-control">
-                  <div className="platform-header">
-                    <span className="platform-name">{platform}</span>
-                    <span className="platform-percent">{platformAllocation[platform as keyof typeof platformAllocation]}%</span>
+            <div className={`section-content ${sidebarCollapsed.platform ? 'collapsed' : ''}`}>
+              <div className="section-content-inner">
+                {Object.keys(platformAllocation).map(platform => (
+                  <div key={platform} className="platform-control">
+                    <div className="platform-header">
+                      <span className="platform-name">{platform}</span>
+                      <span className="platform-percent">{platformAllocation[platform as keyof typeof platformAllocation]}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="50"
+                      value={platformAllocation[platform as keyof typeof platformAllocation]}
+                      onChange={e => updatePlatformAllocation(platform, parseInt(e.target.value))}
+                      className="slider platform-slider"
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="50"
-                    value={platformAllocation[platform as keyof typeof platformAllocation]}
-                    onChange={e => updatePlatformAllocation(platform, parseInt(e.target.value))}
-                    className="slider platform-slider"
-                  />
-                </div>
-              ))}
-              </>
-            )}
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="panel-section">
+          <div className={`panel-section ${sidebarCollapsed.contentMix ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('contentMix')}>
               <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.contentMix ? 'collapsed' : ''}`}>▾</span>
-                <span className="step-badge">4</span> Content Mix
+                <span className={`collapse-icon ${sidebarCollapsed.contentMix ? 'collapsed' : ''}`}>{sidebarCollapsed.contentMix ? '+' : '−'}</span>
+                Content Mix
               </div>
-              <HelpTooltip text="Define the content type distribution for each platform. Click platform names to expand." />
+              {sidebarCollapsed.contentMix ? (
+                <div className="collapsed-summary">4 platforms</div>
+              ) : (
+                <HelpTooltip text="Define the content type distribution for each platform. Click platform names to expand." />
+              )}
             </div>
-            {sidebarCollapsed.contentMix ? (
-              <div className="collapsed-summary">4 platforms configured</div>
-            ) : (
-              <>
-              {Object.keys(contentMix).map(platform => (
-                <div key={platform} className="content-mix-section">
-                  <button
-                    className="content-mix-header"
-                    onClick={(e) => { e.stopPropagation(); setExpandedContentMix(expandedContentMix === platform ? null : platform) }}
-                  >
-                    <span className="platform-name">{platform}</span>
-                    <span className="expand-icon">{expandedContentMix === platform ? '▼' : '▶'}</span>
-                  </button>
-                  {expandedContentMix === platform && (
-                    <div className="content-mix-controls">
-                      {Object.keys(contentMix[platform as keyof typeof contentMix]).map(contentType => {
-                        const platformMix = contentMix[platform as keyof typeof contentMix]
-                        const value = platformMix[contentType as keyof typeof platformMix]
-                        return (
-                          <div key={contentType} className="content-mix-item">
-                            <label>{contentType}</label>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={value}
-                              onChange={e => updateContentMix(platform, contentType, parseInt(e.target.value))}
-                              className="slider content-slider"
-                            />
-                            <span className="content-value">{value}%</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              ))}
-              </>
-            )}
+            <div className={`section-content ${sidebarCollapsed.contentMix ? 'collapsed' : ''}`}>
+              <div className="section-content-inner">
+                {Object.keys(contentMix).map(platform => (
+                  <div key={platform} className="content-mix-section">
+                    <button
+                      className="content-mix-header"
+                      onClick={(e) => { e.stopPropagation(); setExpandedContentMix(expandedContentMix === platform ? null : platform) }}
+                    >
+                      <span className="platform-name">{platform}</span>
+                      <span className="expand-icon">{expandedContentMix === platform ? '▼' : '▶'}</span>
+                    </button>
+                    {expandedContentMix === platform && (
+                      <div className="content-mix-controls">
+                        {Object.keys(contentMix[platform as keyof typeof contentMix]).map(contentType => {
+                          const platformMix = contentMix[platform as keyof typeof contentMix]
+                          const value = platformMix[contentType as keyof typeof platformMix]
+                          return (
+                            <div key={contentType} className="content-mix-item">
+                              <label>{contentType}</label>
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={value}
+                                onChange={e => updateContentMix(platform, contentType, parseInt(e.target.value))}
+                                className="slider content-slider"
+                              />
+                              <span className="content-value">{value}%</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="panel-section ai-section">
+          <div className={`panel-section ai-section ${sidebarCollapsed.aiInsights ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('aiInsights')}>
               <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.aiInsights ? 'collapsed' : ''}`}>▾</span>
-                <span className="step-badge">7</span> AI Insights
+                <span className={`collapse-icon ${sidebarCollapsed.aiInsights ? 'collapsed' : ''}`}>{sidebarCollapsed.aiInsights ? '+' : '−'}</span>
+                AI Advisor
               </div>
-              <HelpTooltip text="Get AI-powered recommendations for 3 alternative strategies: Optimized, Aggressive, and Conservative" />
+              {sidebarCollapsed.aiInsights ? (
+                <div className="collapsed-summary">{aiInsights ? 'Ready' : 'Click to analyze'}</div>
+              ) : (
+                <HelpTooltip text="AI analyzes your complete configuration to recommend strategies for doubling followers within 12 months on a $100K budget" />
+              )}
             </div>
-            {sidebarCollapsed.aiInsights ? (
-              <div className="collapsed-summary">Risk: {riskLevel}</div>
-            ) : (
-            <>
-            {/* Compact, dynamic insight based on current settings */}
-            <div style={{opacity: aiLoadingCompact? 0.6:1, transition:'opacity 0.2s'}}>
-              <div className="ai-analysis">{aiInsight || 'Adjust settings to see a contextual insight about your path to goal.'}</div>
-            </div>
-            <button
-              onClick={() => setLastInsightKey('')}
-              className="ai-button"
-              disabled={aiLoadingCompact}
-            >
-              Refresh Insight
-            </button>
-            <button
-              onClick={getAIRecommendations}
-              disabled={aiLoading}
-              className="ai-button"
-            >
-              {aiLoading && <span className="btn-spinner" />}
-              {aiLoading ? 'Analyzing...' : 'Regenerate Insights'}
-            </button>
-
-            {aiInsights && (
-              <div className="ai-results">
-                <div className="ai-analysis">{aiInsights.analysis}</div>
-
-                <div className="ai-insights-list">
-                  {aiInsights.key_insights.map((insight, idx) => (
-                    <div key={idx} className="insight-item">{insight}</div>
-                  ))}
-                </div>
+            <div className={`section-content ${sidebarCollapsed.aiInsights ? 'collapsed' : ''}`}>
+              <div className="section-content-inner">
+                {aiLoading ? (
+                  <div className="ai-loading-container">
+                    <div className="ai-spinner" />
+                    <div className="ai-loading-text">Analyzing your strategy...</div>
+                    <div className="ai-loading-text" style={{fontSize:'0.75rem', opacity:0.7}}>Reviewing budgets, allocations, and growth targets</div>
+                  </div>
+                ) : aiInsights ? (
+                  <>
+                    <div className="ai-results">
+                      <div className="ai-analysis">{aiInsights.analysis}</div>
+                      <div className="ai-insights-list">
+                        {aiInsights.key_insights.map((insight, idx) => (
+                          <div key={idx} className="insight-item">{insight}</div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="insight-card">
+                      <div className="insight-label">Oversaturation Risk</div>
+                      <div className="insight-value" style={{color: riskColor}}>
+                        {riskLevel}
+                      </div>
+                    </div>
+                    <button
+                      onClick={getAIRecommendations}
+                      className="ai-button"
+                      style={{marginTop:'0.5rem'}}
+                    >
+                      Re-analyze Strategy
+                    </button>
+                  </>
+                ) : (
+                  <div className="ai-loading-container" style={{padding:'1.5rem'}}>
+                    <div className="ai-loading-text">Click to analyze your configuration</div>
+                    <button
+                      onClick={getAIRecommendations}
+                      className="ai-button"
+                    >
+                      Analyze Strategy
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-
-            <div className="insight-card">
-              <div className="insight-label">Oversaturation Risk</div>
-              <div className="insight-value" style={{color: riskColor}}>
-                {riskLevel}
-              </div>
             </div>
-            </>
-            )}
           </div>
 
           {/* Advanced — Assumptions & Tuning at bottom */}
-          <div className="panel-section">
+          <div className={`panel-section ${sidebarCollapsed.advanced ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('advanced')}>
               <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.advanced ? 'collapsed' : ''}`}>▾</span>
-                Advanced — Assumptions & Tuning
+                <span className={`collapse-icon ${sidebarCollapsed.advanced ? 'collapsed' : ''}`}>{sidebarCollapsed.advanced ? '+' : '−'}</span>
+                Advanced
               </div>
-              <HelpTooltip text="Inspect and tweak the model's underlying assumptions. Collapsed to keep focus on the planning flow." />
+              {!sidebarCollapsed.advanced && (
+                <HelpTooltip text="Inspect and tweak the model's underlying assumptions. Collapsed to keep focus on the planning flow." />
+              )}
             </div>
-            {!sidebarCollapsed.advanced && (
-            <>
-              <Assumptions />
-              <div style={{marginTop:'0.75rem', display:'flex', gap:'8px'}}>
-                <button className="ai-button" onClick={() => setShowTune(true)}>
-                  AI Parameter Suggestions (beta)
-                </button>
+            <div className={`section-content ${sidebarCollapsed.advanced ? 'collapsed' : ''}`}>
+              <div className="section-content-inner">
+                <Assumptions />
+                <div style={{marginTop:'0.75rem', display:'flex', gap:'8px'}}>
+                  <button className="ai-button" onClick={() => setShowTune(true)}>
+                    AI Parameter Suggestions (beta)
+                  </button>
+                </div>
               </div>
-            </>
-            )}
+            </div>
           </div>
         </div>
 
         {/* Right Panel: Visualizations */}
         <div className="viz-panel">
           {/* At-a-glance KPIs */}
-          <div className="metrics-row" style={{marginBottom:'1rem', gridTemplateColumns:'repeat(3, 1fr)'}}>
+          <div className="metrics-row" style={{gridTemplateColumns:'repeat(3, 1fr)'}}>
             <div className="metric-card">
               <div className="metric-label">Current Reach</div>
               <div className="metric-value">{(totalFollowers / 1000000).toFixed(2)}M</div>
@@ -905,14 +942,14 @@ export function Dashboard() {
 
           {/* Historical context first */}
           {historicalData && (
-            <div className="historical-section" style={{marginBottom:'1.25rem'}}>
-              <div className="section-header" style={{marginBottom:'0.75rem', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+            <div className={`historical-section ${historicalCollapsed ? 'collapsed' : ''}`}>
+              <div className="section-header" style={{marginBottom: historicalCollapsed ? 0 : '0.75rem', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
                 <div>
-                  Historical Context
+                  Historical Context (2025)
                   <HelpTooltip text="Past performance data showing engagement trends, sentiment analysis, and popular tags over time" />
                 </div>
-                <button className="ai-button" onClick={()=> setHistoricalCollapsed(v=>!v)}>
-                  {historicalCollapsed ? 'Expand' : 'Minimize'}
+                <button className="chart-mode-btn" onClick={()=> setHistoricalCollapsed(v=>!v)}>
+                  {historicalCollapsed ? '▸ Expand' : '▾ Minimize'}
                 </button>
               </div>
 
@@ -997,20 +1034,60 @@ export function Dashboard() {
 
                 {historicalTab === 'growth' && followerHistory && (
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={followerHistory}>
+                    <LineChart data={(function() {
+                      // Transform data to split solid vs dashed based on interpolation flags
+                      return followerHistory.map((row: any) => {
+                        const point: any = { label: row.label }
+                        const platforms = ['Total', 'Instagram', 'TikTok', 'YouTube', 'Facebook']
+                        platforms.forEach(p => {
+                          if (row[p] !== undefined) {
+                            if (row[`${p}_interpolated`]) {
+                              point[`${p}_dashed`] = row[p]
+                            } else {
+                              point[`${p}_solid`] = row[p]
+                            }
+                            // Also keep combined for connecting line
+                            point[p] = row[p]
+                          }
+                        })
+                        return point
+                      })
+                    })()} margin={{ top: 5, right: 50, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                      <XAxis dataKey="label" stroke="var(--text-secondary)" />
-                      <YAxis stroke="var(--text-secondary)" tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} />
+                      <XAxis dataKey="label" stroke="var(--text-secondary)" tick={{fontSize: 10}} interval={0} angle={-45} textAnchor="end" height={50} />
+                      <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} width={45} />
                       <Tooltip
                         contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
-                        formatter={(value: number) => [(value / 1000).toFixed(0) + 'K', '']}
+                        formatter={(value: number, name: string) => {
+                          // Only show _solid and _dashed entries, skip the combined values
+                          if (!name.includes('_solid') && !name.includes('_dashed')) return null
+                          const cleanName = name.replace('_solid', '').replace('_dashed', ' (est.)')
+                          return [(value / 1000).toFixed(0) + 'K', cleanName]
+                        }}
                       />
-                      <Legend />
-                      <Line type="monotone" dataKey="Total" stroke={SERIES_COLORS.total} strokeWidth={3} dot={false} />
-                      <Line type="monotone" dataKey="Instagram" stroke={SERIES_COLORS.instagram} strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="TikTok" stroke={SERIES_COLORS.tiktok} strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="YouTube" stroke={SERIES_COLORS.youtube} strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="Facebook" stroke={SERIES_COLORS.facebook} strokeWidth={2} dot={false} />
+                      <Legend formatter={(value: string) => value.replace('_solid', '').replace('_dashed', '')} />
+                      {/* Dashed lines for interpolated data (behind) */}
+                      <Line type="monotone" dataKey="Total_dashed" stroke={SERIES_COLORS.total} strokeWidth={3} dot={false} strokeDasharray="6 4" connectNulls={false} legendType="none" />
+                      <Line type="monotone" dataKey="Instagram_dashed" stroke={SERIES_COLORS.instagram} strokeWidth={2} dot={false} strokeDasharray="6 4" connectNulls={false} legendType="none" />
+                      <Line type="monotone" dataKey="TikTok_dashed" stroke={SERIES_COLORS.tiktok} strokeWidth={2} dot={false} strokeDasharray="6 4" connectNulls={false} legendType="none" />
+                      <Line type="monotone" dataKey="YouTube_dashed" stroke={SERIES_COLORS.youtube} strokeWidth={2} dot={false} strokeDasharray="6 4" connectNulls={false} legendType="none" />
+                      <Line type="monotone" dataKey="Facebook_dashed" stroke={SERIES_COLORS.facebook} strokeWidth={2} dot={false} strokeDasharray="6 4" connectNulls={false} legendType="none" />
+                      {/* Solid lines for real data (on top) */}
+                      <Line type="monotone" dataKey="Total_solid" stroke={SERIES_COLORS.total} strokeWidth={3} dot={false} connectNulls={false} name="Total">
+                        <LabelList dataKey="Total" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y - 8} fill={SERIES_COLORS.total} fontSize={9} fontWeight={600}>Total</text> : null} />
+                      </Line>
+                      <Line type="monotone" dataKey="Instagram_solid" stroke={SERIES_COLORS.instagram} strokeWidth={2} dot={false} connectNulls={false} name="Instagram">
+                        <LabelList dataKey="Instagram" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y + 3} fill={SERIES_COLORS.instagram} fontSize={9} fontWeight={600}>IG</text> : null} />
+                      </Line>
+                      <Line type="monotone" dataKey="TikTok_solid" stroke={SERIES_COLORS.tiktok} strokeWidth={2} dot={false} connectNulls={false} name="TikTok">
+                        <LabelList dataKey="TikTok" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y - 5} fill={SERIES_COLORS.tiktok} fontSize={9} fontWeight={600}>TT</text> : null} />
+                      </Line>
+                      <Line type="monotone" dataKey="YouTube_solid" stroke={SERIES_COLORS.youtube} strokeWidth={2} dot={false} connectNulls={false} name="YouTube">
+                        <LabelList dataKey="YouTube" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y + 8} fill={SERIES_COLORS.youtube} fontSize={9} fontWeight={600}>YT</text> : null} />
+                      </Line>
+                      <Line type="monotone" dataKey="Facebook_solid" stroke={SERIES_COLORS.facebook} strokeWidth={2} dot={false} connectNulls={false} name="Facebook">
+                        <LabelList dataKey="Facebook" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y + 12} fill={SERIES_COLORS.facebook} fontSize={9} fontWeight={600}>FB</text> : null} />
+                      </Line>
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -1025,58 +1102,61 @@ export function Dashboard() {
             </div>
           )}
           <div className="chart-container main-chart">
-              <div className="chart-header">
-                <h2>Followers — Historical & Forecast</h2>
+              <div className="chart-header" style={{flexWrap:'wrap', gap:'8px'}}>
+                <h2 style={{marginRight:'auto'}}>Followers — {chartMode === 'historical' ? 'Historical (2025)' : chartMode === 'forecast' ? 'Forecast (2026)' : 'Historical (2025) & Forecast (2026)'}</h2>
                 {loading && <span className="loading-indicator">Calculating...</span>}
-                <div style={{marginLeft:'auto', display:'flex', gap:'4px', flexWrap:'wrap', alignItems:'center'}}>
+                <div style={{display:'flex', gap:'4px', flexWrap:'wrap', alignItems:'center', flex:1, justifyContent:'flex-end'}}>
                   <button className={`chart-mode-btn ${chartMode==='historical'?'active':''}`} onClick={()=> setChartMode('historical')}>Hist</button>
                   <button className={`chart-mode-btn ${chartMode==='forecast'?'active':''}`} onClick={()=> setChartMode('forecast')}>Fcst</button>
                   <button className={`chart-mode-btn ${chartMode==='both'?'active':''}`} onClick={()=> setChartMode('both')}>Both</button>
-                  <div style={{display:'flex', gap:'8px', marginLeft:'8px'}}>
+                  <div style={{display:'flex', gap:'6px', marginLeft:'8px'}}>
                     {(['Total','Instagram','TikTok','YouTube','Facebook'] as const).map((p)=> (
-                      <label key={p} style={{display:'flex', alignItems:'center', gap:'4px', color:'var(--text-secondary)', fontSize:'0.85rem'}}>
+                      <label key={p} style={{display:'flex', alignItems:'center', gap:'3px', color:'var(--text-secondary)', fontSize:'0.8rem', cursor:'pointer'}}>
                         <input type="checkbox" checked={showPlatforms[p]} onChange={e=> setShowPlatforms(prev=> ({...prev, [p]: e.target.checked}))} /> {p}
                       </label>
                     ))}
                   </div>
+                  {/* AI Scenario toggles - only show when forecast/both is visible */}
+                  {chartMode !== 'historical' && scenarios.length > 0 && (
+                    <div style={{display:'flex', gap:'6px', marginLeft:'auto', paddingLeft:'12px', borderLeft:'1px solid var(--border)'}}>
+                      {scenarios.map((scenario, idx) => (
+                        <label key={idx} style={{display:'flex', alignItems:'center', gap:'3px', color: scenario.color, fontSize:'0.8rem', cursor:'pointer'}}>
+                          <input
+                            type="checkbox"
+                            checked={scenario.visible}
+                            onChange={() => toggleScenario(idx)}
+                          />
+                          {scenario.name}
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-
-            {/* Debug info - remove in production */}
-            <div style={{fontSize:'0.7rem', color:'var(--text-secondary)', marginBottom:'0.5rem'}}>
-              Historical: {followerHistory?.length || 0} rows | Forecast: {chartData?.length || 0} rows | Mode: {chartMode}
-            </div>
-
-            {scenarios.length > 0 && (
-              <div className="scenario-toggles">
-                <label className="scenario-toggle">
-                  <input type="checkbox" checked disabled />
-                  <span style={{color: 'var(--text-primary)'}}>Manual (Your Settings)</span>
-                </label>
-                {scenarios.map((scenario, idx) => (
-                  <label key={idx} className="scenario-toggle">
-                    <input
-                      type="checkbox"
-                      checked={scenario.visible}
-                      onChange={() => toggleScenario(idx)}
-                    />
-                    <span style={{color: scenario.color}}>{scenario.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
 
             <ResponsiveContainer width="100%" height={400}>
               <ComposedChart data={(function(){
                 // Build historical data points with _hist suffix
-                const hist = (followerHistory||[]).map((row:any, idx:number)=> ({
-                  month: row.label || `H${idx+1}`,
-                  Total_hist: row.Total,
-                  Instagram_hist: row.Instagram,
-                  TikTok_hist: row.TikTok,
-                  YouTube_hist: row.YouTube,
-                  Facebook_hist: row.Facebook,
-                }))
+                // Split into solid (real) and dashed (interpolated) values
+                const hist = (followerHistory||[]).map((row:any, idx:number)=> {
+                  const point: any = {
+                    month: row.label || `H${idx+1}`,
+                  }
+                  // For each platform, put value in solid or dashed key based on interpolation flag
+                  const platforms = ['Total', 'Instagram', 'TikTok', 'YouTube', 'Facebook']
+                  platforms.forEach(p => {
+                    if (row[p] !== undefined) {
+                      if (row[`${p}_interpolated`]) {
+                        point[`${p}_hist_dashed`] = row[p]
+                      } else {
+                        point[`${p}_hist`] = row[p]
+                      }
+                      // Also store the full value for connecting lines
+                      point[`${p}_hist_all`] = row[p]
+                    }
+                  })
+                  return point
+                })
 
                 // Build forecast data points
                 const fc = (chartData||[]).map((row:any)=> ({
@@ -1099,16 +1179,34 @@ export function Dashboard() {
                 if (chartMode==='forecast') return fc
                 if (chartMode==='historical') return hist
                 // 'both' mode: concatenate historical then forecast
+                // Add forecast values to last historical point to create bridge
+                if (hist.length > 0 && fc.length > 0) {
+                  const lastHist = hist[hist.length - 1]
+                  const firstFc = fc[0]
+                  // Copy forecast keys to last historical point to connect the lines
+                  lastHist.Total_forecast = lastHist.Total_hist_all || lastHist.Total_hist
+                  lastHist.Instagram_forecast = lastHist.Instagram_hist_all || lastHist.Instagram_hist
+                  lastHist.TikTok_forecast = lastHist.TikTok_hist_all || lastHist.TikTok_hist
+                  lastHist.YouTube_forecast = lastHist.YouTube_hist_all || lastHist.YouTube_hist
+                  lastHist.Facebook_forecast = lastHist.Facebook_hist_all || lastHist.Facebook_hist
+                }
                 return [...hist, ...fc]
-              })()}>
+              })()} margin={{ top: 5, right: 50, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="month" stroke="var(--text-secondary)" />
-                <YAxis stroke="var(--text-secondary)" tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} />
+                <XAxis dataKey="month" stroke="var(--text-secondary)" tick={{fontSize: 10}} interval={0} angle={-45} textAnchor="end" height={50} />
+                <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} width={45} />
                 <Tooltip
                   contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
-                  formatter={(value: number) => [(value / 1000).toFixed(0) + 'K', '']}
+                  formatter={(value: number, name: string) => {
+                    // Clean up the dataKey name for display
+                    let displayName = name
+                      .replace('_hist_all', ' (est.)')
+                      .replace('_hist', '')
+                      .replace('_forecast', ' (forecast)')
+                      .replace('Total', 'Total')
+                    return [(value / 1000).toFixed(0) + 'K', displayName]
+                  }}
                 />
-                <Legend />
                 <ReferenceLine
                   y={goalFollowers}
                   stroke="var(--fountain-blue)"
@@ -1125,31 +1223,83 @@ export function Dashboard() {
                 )}
                 {chartMode==='forecast' && (
                   <>
-                    {showPlatforms.Total && (<Line type="monotone" dataKey="Total" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} name="Total (Manual)" />)}
-                    {showPlatforms.Instagram && (<Line type="monotone" dataKey="Instagram" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} strokeDasharray="4 2" />)}
-                    {showPlatforms.TikTok && (<Line type="monotone" dataKey="TikTok" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} strokeDasharray="3 3" />)}
-                    {showPlatforms.YouTube && (<Line type="monotone" dataKey="YouTube" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} strokeDasharray="6 3" />)}
-                    {showPlatforms.Facebook && (<Line type="monotone" dataKey="Facebook" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} strokeDasharray="2 2" />)}
+                    {showPlatforms.Total && (<Line type="monotone" dataKey="Total" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} name="Total (Manual)">
+                      <LabelList dataKey="Total" content={({x, y, index}: any) => index === (chartData?.length || 0) - 1 ? <text x={x + 5} y={y - 8} fill={SERIES_COLORS.total} fontSize={9} fontWeight={600}>Total</text> : null} />
+                    </Line>)}
+                    {showPlatforms.Instagram && (<Line type="monotone" dataKey="Instagram" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} strokeDasharray="4 2">
+                      <LabelList dataKey="Instagram" content={({x, y, index}: any) => index === (chartData?.length || 0) - 1 ? <text x={x + 5} y={y + 3} fill={SERIES_COLORS.instagram} fontSize={9} fontWeight={600}>IG</text> : null} />
+                    </Line>)}
+                    {showPlatforms.TikTok && (<Line type="monotone" dataKey="TikTok" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} strokeDasharray="3 3">
+                      <LabelList dataKey="TikTok" content={({x, y, index}: any) => index === (chartData?.length || 0) - 1 ? <text x={x + 5} y={y - 5} fill={SERIES_COLORS.tiktok} fontSize={9} fontWeight={600}>TT</text> : null} />
+                    </Line>)}
+                    {showPlatforms.YouTube && (<Line type="monotone" dataKey="YouTube" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} strokeDasharray="6 3">
+                      <LabelList dataKey="YouTube" content={({x, y, index}: any) => index === (chartData?.length || 0) - 1 ? <text x={x + 5} y={y + 8} fill={SERIES_COLORS.youtube} fontSize={9} fontWeight={600}>YT</text> : null} />
+                    </Line>)}
+                    {showPlatforms.Facebook && (<Line type="monotone" dataKey="Facebook" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} strokeDasharray="2 2">
+                      <LabelList dataKey="Facebook" content={({x, y, index}: any) => index === (chartData?.length || 0) - 1 ? <text x={x + 5} y={y + 12} fill={SERIES_COLORS.facebook} fontSize={9} fontWeight={600}>FB</text> : null} />
+                    </Line>)}
                   </>
                 )}
                 {chartMode!=='forecast' && (
                   <>
-                    {/* Historical solid */}
-                    {showPlatforms.Total && (<Line type="monotone" dataKey="Total_hist" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} name="Total (hist)" />)}
-                    {showPlatforms.Instagram && (<Line type="monotone" dataKey="Instagram_hist" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} />)}
-                    {showPlatforms.TikTok && (<Line type="monotone" dataKey="TikTok_hist" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} />)}
-                    {showPlatforms.YouTube && (<Line type="monotone" dataKey="YouTube_hist" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} />)}
-                    {showPlatforms.Facebook && (<Line type="monotone" dataKey="Facebook_hist" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} />)}
+                    {/* Historical - dashed lines for interpolated data (rendered first, behind solid) */}
+                    {/* Only show labels on historical lines when in 'historical' mode, not 'both' */}
+                    {showPlatforms.Total && (<Line type="monotone" dataKey="Total_hist_all" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} strokeDasharray="4 4" strokeOpacity={0.5} name="Total (interpolated)" legendType="none">
+                      {chartMode === 'historical' && <LabelList dataKey="Total_hist_all" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y - 8} fill={SERIES_COLORS.total} fontSize={9} fontWeight={600}>Total</text> : null} />}
+                    </Line>)}
+                    {showPlatforms.Instagram && (<Line type="monotone" dataKey="Instagram_hist_all" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} strokeDasharray="4 4" strokeOpacity={0.5} legendType="none">
+                      {chartMode === 'historical' && <LabelList dataKey="Instagram_hist_all" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y + 3} fill={SERIES_COLORS.instagram} fontSize={9} fontWeight={600}>IG</text> : null} />}
+                    </Line>)}
+                    {showPlatforms.TikTok && (<Line type="monotone" dataKey="TikTok_hist_all" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} strokeDasharray="4 4" strokeOpacity={0.5} legendType="none">
+                      {chartMode === 'historical' && <LabelList dataKey="TikTok_hist_all" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y - 5} fill={SERIES_COLORS.tiktok} fontSize={9} fontWeight={600}>TT</text> : null} />}
+                    </Line>)}
+                    {showPlatforms.YouTube && (<Line type="monotone" dataKey="YouTube_hist_all" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} strokeDasharray="4 4" strokeOpacity={0.5} legendType="none">
+                      {chartMode === 'historical' && <LabelList dataKey="YouTube_hist_all" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y + 8} fill={SERIES_COLORS.youtube} fontSize={9} fontWeight={600}>YT</text> : null} />}
+                    </Line>)}
+                    {showPlatforms.Facebook && (<Line type="monotone" dataKey="Facebook_hist_all" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} strokeDasharray="4 4" strokeOpacity={0.5} legendType="none">
+                      {chartMode === 'historical' && <LabelList dataKey="Facebook_hist_all" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y + 12} fill={SERIES_COLORS.facebook} fontSize={9} fontWeight={600}>FB</text> : null} />}
+                    </Line>)}
+                    {/* Historical - solid lines for real data (rendered on top) */}
+                    {showPlatforms.Total && (<Line type="monotone" dataKey="Total_hist" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} name="Total (hist)" connectNulls={false} />)}
+                    {showPlatforms.Instagram && (<Line type="monotone" dataKey="Instagram_hist" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} name="Instagram" connectNulls={false} />)}
+                    {showPlatforms.TikTok && (<Line type="monotone" dataKey="TikTok_hist" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} name="TikTok" connectNulls={false} />)}
+                    {showPlatforms.YouTube && (<Line type="monotone" dataKey="YouTube_hist" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} name="YouTube" connectNulls={false} />)}
+                    {showPlatforms.Facebook && (<Line type="monotone" dataKey="Facebook_hist" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} name="Facebook" connectNulls={false} />)}
                   </>
                 )}
                 {chartMode==='both' && (
                   <>
-                    {/* Forecast dashed continuation */}
-                    {showPlatforms.Total && (<Line type="monotone" dataKey="Total_forecast" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} strokeDasharray="6 6" name="Total (forecast)" />)}
-                    {showPlatforms.Instagram && (<Line type="monotone" dataKey="Instagram_forecast" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} strokeDasharray="6 6" />)}
-                    {showPlatforms.TikTok && (<Line type="monotone" dataKey="TikTok_forecast" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} strokeDasharray="6 6" />)}
-                    {showPlatforms.YouTube && (<Line type="monotone" dataKey="YouTube_forecast" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} strokeDasharray="6 6" />)}
-                    {showPlatforms.Facebook && (<Line type="monotone" dataKey="Facebook_forecast" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} strokeDasharray="6 6" />)}
+                    {/* Forecast dashed continuation - labels shown at far right */}
+                    {showPlatforms.Total && (<Line type="monotone" dataKey="Total_forecast" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} strokeDasharray="6 6" name="Total (forecast)">
+                      <LabelList dataKey="Total_forecast" content={({x, y, index, payload}: any) => {
+                        const combinedLen = (followerHistory?.length || 0) + (chartData?.length || 0)
+                        return index === combinedLen - 1 ? <text x={x + 5} y={y - 8} fill={SERIES_COLORS.total} fontSize={9} fontWeight={600}>Total</text> : null
+                      }} />
+                    </Line>)}
+                    {showPlatforms.Instagram && (<Line type="monotone" dataKey="Instagram_forecast" stroke={SERIES_COLORS.instagram} strokeWidth={2.5} dot={false} strokeDasharray="6 6">
+                      <LabelList dataKey="Instagram_forecast" content={({x, y, index}: any) => {
+                        const combinedLen = (followerHistory?.length || 0) + (chartData?.length || 0)
+                        return index === combinedLen - 1 ? <text x={x + 5} y={y + 3} fill={SERIES_COLORS.instagram} fontSize={9} fontWeight={600}>IG</text> : null
+                      }} />
+                    </Line>)}
+                    {showPlatforms.TikTok && (<Line type="monotone" dataKey="TikTok_forecast" stroke={SERIES_COLORS.tiktok} strokeWidth={2.5} dot={false} strokeDasharray="6 6">
+                      <LabelList dataKey="TikTok_forecast" content={({x, y, index}: any) => {
+                        const combinedLen = (followerHistory?.length || 0) + (chartData?.length || 0)
+                        return index === combinedLen - 1 ? <text x={x + 5} y={y - 5} fill={SERIES_COLORS.tiktok} fontSize={9} fontWeight={600}>TT</text> : null
+                      }} />
+                    </Line>)}
+                    {showPlatforms.YouTube && (<Line type="monotone" dataKey="YouTube_forecast" stroke={SERIES_COLORS.youtube} strokeWidth={2.5} dot={false} strokeDasharray="6 6">
+                      <LabelList dataKey="YouTube_forecast" content={({x, y, index}: any) => {
+                        const combinedLen = (followerHistory?.length || 0) + (chartData?.length || 0)
+                        return index === combinedLen - 1 ? <text x={x + 5} y={y + 8} fill={SERIES_COLORS.youtube} fontSize={9} fontWeight={600}>YT</text> : null
+                      }} />
+                    </Line>)}
+                    {showPlatforms.Facebook && (<Line type="monotone" dataKey="Facebook_forecast" stroke={SERIES_COLORS.facebook} strokeWidth={2.5} dot={false} strokeDasharray="6 6">
+                      <LabelList dataKey="Facebook_forecast" content={({x, y, index}: any) => {
+                        const combinedLen = (followerHistory?.length || 0) + (chartData?.length || 0)
+                        return index === combinedLen - 1 ? <text x={x + 5} y={y + 12} fill={SERIES_COLORS.facebook} fontSize={9} fontWeight={600}>FB</text> : null
+                      }} />
+                    </Line>)}
                   </>
                 )}
                 {chartMode==='forecast' && scenarios.map((scenario, idx) =>
@@ -1212,38 +1362,33 @@ export function Dashboard() {
           {/* Acquisition Breakdown */}
           {forecastResults?.added_breakdown && (
             <div className="chart-container">
-              <div className="chart-header" style={{gap:'12px'}}>
+              <div className="chart-header">
                 <h2 style={{margin:0}}>Acquisition Breakdown</h2>
-                <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:'8px'}}>
-                  <label style={{fontSize:'0.85rem', color:'var(--text-secondary)'}}>Month</label>
-                  <select
-                    value={selectedBreakdownIndex}
-                    onChange={e=>setSelectedBreakdownIndex(parseInt(e.target.value))}
-                    className="preset-select"
-                    style={{width:'auto', padding:'0.4rem 0.6rem'}}
-                  >
-                    {forecastResults.added_breakdown.map((_, idx) => (
-                      <option key={idx} value={idx}>{`M${idx+1}`}</option>
-                    ))}
-                  </select>
-                </div>
               </div>
-              <div style={{display:'grid', gridTemplateColumns:'1fr 2fr', gap:'16px', alignItems:'center'}}>
-                <div className="metrics-row" style={{gridTemplateColumns:'1fr 1fr'}}>
-                  <div className="metric-card">
-                    <div className="metric-label">Added Followers</div>
-                    <div className="metric-value">{(lastTotalAdded/1000).toFixed(1)}K</div>
-                    <div className="metric-subtitle">Month {selectedBreakdownIndex+1} of {forecastResults.added_breakdown.length}</div>
-                  </div>
-                  <div className="metric-card">
-                    <div className="metric-label">Paid vs Organic</div>
-                    <div className="metric-value nowrap">{paidPct.toFixed(0)}% / {orgPct.toFixed(0)}%</div>
-                    <div className="metric-subtitle">Paid / Organic</div>
-                  </div>
-                </div>
-                <div style={{height:'18px', background:'var(--bg-secondary)', borderRadius:'10px', overflow:'hidden', border:'1px solid var(--border)'}}>
-                  <div style={{width: `${paidPct}%`, height:'100%', background:'var(--primary)'}}></div>
-                </div>
+              <div style={{display:'flex', gap:'8px', overflowX:'auto', paddingBottom:'4px'}}>
+                {forecastResults.added_breakdown.map((breakdown, idx) => {
+                  const monthTotal = (breakdown.organic || 0) + (breakdown.paid || 0)
+                  const monthPaidPct = monthTotal > 0 ? ((breakdown.paid || 0) / monthTotal) * 100 : 0
+                  const monthOrgPct = 100 - monthPaidPct
+                  return (
+                    <div key={idx} style={{
+                      flex: '1 1 0',
+                      minWidth: '70px',
+                      background: 'var(--bg-primary)',
+                      borderRadius: '8px',
+                      padding: '8px',
+                      border: '1px solid var(--border)',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{fontSize:'0.7rem', fontWeight:700, color:'var(--text-secondary)', marginBottom:'4px'}}>M{idx+1}</div>
+                      <div style={{fontSize:'0.9rem', fontWeight:800, color:'var(--fountain-blue)'}}>{(monthTotal/1000).toFixed(0)}K</div>
+                      <div style={{height:'6px', background:'var(--bg-secondary)', borderRadius:'3px', overflow:'hidden', margin:'4px 0'}}>
+                        <div style={{width:`${monthPaidPct}%`, height:'100%', background:'var(--primary)'}}></div>
+                      </div>
+                      <div style={{fontSize:'0.6rem', color:'var(--text-secondary)'}}>{monthPaidPct.toFixed(0)}% paid</div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -1427,7 +1572,7 @@ function Assumptions() {
 }
 // Distinct, accessible series colors
 const SERIES_COLORS = {
-  total: '#FFFFFF',            // bright white for the main total line
+  total: '#1E293B',            // dark slate for the main total line (works on light bg)
   instagram: '#D946EF',        // fuchsia
   tiktok: '#06B6D4',           // cyan
   youtube: '#EF4444',          // red

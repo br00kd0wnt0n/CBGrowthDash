@@ -20,16 +20,15 @@ function App() {
           <img src="/CB_logo_FINAL_FullColor.png" alt="Care Bears" className="logo-small" />
           <div className="header-title">
             <h1>Growth Forecast Dashboard</h1>
-            <span className="period">DEC 2025</span>
           </div>
         </div>
         <div className="header-right">
+          <button className="underhood-btn" onClick={() => setShowInfo(true)}>Under the hood</button>
           <div className={`status-lockup ${status.online ? 'online' : 'offline'}`}>
             <img src="/logo.png" alt="Ralph" className="lockup-logo" />
             <div className="status-indicator" />
             <span className="lockup-text">{status.online ? 'Connected' : 'Offline'}</span>
           </div>
-          <button className="underhood-btn" onClick={() => setShowInfo(true)}>Under the hood</button>
         </div>
       </header>
 

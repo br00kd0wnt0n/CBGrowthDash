@@ -20,6 +20,20 @@ async def get_ai_insights(request: ForecastRequest):
         data_dir = Path(__file__).parent.parent / "data"
         historical_data = load_historical_data(data_dir)
 
+        # Build budget info from request
+        paid_weekly = (request.paid_budget_per_week_total or 0) + (request.creator_budget_per_week_total or 0)
+        growth_weekly = request.acquisition_budget_per_week_total or 0
+        cpf = request.cpf_paid or {"min": 0.50, "mid": 0.75, "max": 1.00}
+
+        budget_info = {
+            "total_annual_budget": (paid_weekly + growth_weekly) * 52,
+            "paid_media_weekly": request.paid_budget_per_week_total or 0,
+            "growth_strategy_weekly": (request.creator_budget_per_week_total or 0) + (request.acquisition_budget_per_week_total or 0),
+            "cpf_range": cpf,
+            "projected_total": request.projected_total,
+            "goal_followers": request.goal_followers,
+        }
+
         # Get AI analysis
         ai_result = analyze_strategy(
             current_followers=request.current_followers,
@@ -27,7 +41,8 @@ async def get_ai_insights(request: ForecastRequest):
             platform_allocation=request.platform_allocation,
             months=request.months,
             preset=request.preset,
-            historical_data=historical_data
+            historical_data=historical_data,
+            budget_info=budget_info
         )
 
         # Convert to response schema
