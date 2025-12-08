@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { LineChart, ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, LabelList } from 'recharts'
-import { api, type HistoricalDataResponse, type ForecastRequest, type ForecastResponse, type AIInsightsResponse, type AIScenario } from '../services/api'
+import { LineChart, ComposedChart, BarChart, Bar, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, LabelList } from 'recharts'
+import { api, type HistoricalDataResponse, type ForecastRequest, type ForecastResponse, type AIInsightsResponse, type AIScenario, type PlatformMetricsResponse } from '../services/api'
 import './Dashboard.css'
 
 // Number formatting utility (currently unused but available for future use)
@@ -29,6 +29,7 @@ export function Dashboard() {
   // State
   const [historicalData, setHistoricalData] = useState<HistoricalDataResponse | null>(null)
   const [forecastResults, setForecastResults] = useState<ForecastResponse | null>(null)
+  const [platformMetrics, setPlatformMetrics] = useState<PlatformMetricsResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
 
@@ -78,10 +79,11 @@ export function Dashboard() {
   const [aiInsights, setAiInsights] = useState<AIInsightsResponse | null>(null)
   const [scenarios, setScenarios] = useState<ScenarioWithForecast[]>([])
   const [expandedContentMix, setExpandedContentMix] = useState<string | null>(null)
-  const [historicalTab, setHistoricalTab] = useState<'mentions' | 'sentiment' | 'tags' | 'growth'>('mentions')
+  const [historicalTab, setHistoricalTab] = useState<'mentions' | 'sentiment' | 'tags' | 'performance'>('mentions')
   // Confidence band totals (per month)
   const [bandHigh, setBandHigh] = useState<number[] | null>(null) // optimistic (CPF min)
   const [bandLow, setBandLow] = useState<number[] | null>(null)   // pessimistic (CPF max)
+  const [showCPFBand, setShowCPFBand] = useState(true) // toggle for CPF range visualization
   // Followers history for combined chart and mode toggle
   const [followerHistory, setFollowerHistory] = useState<any[] | null>(null)
   const [chartMode, setChartMode] = useState<'historical'|'forecast'|'both'>('both')
@@ -129,6 +131,7 @@ export function Dashboard() {
   // Load historical data on mount
   useEffect(() => {
     loadHistoricalData()
+    loadPlatformMetrics()
     // Load follower history (from workbook) for unified chart if available
     api.getFollowersHistory().then(res=> {
       console.log('Follower history loaded:', res.data?.length, 'rows')
@@ -183,6 +186,15 @@ export function Dashboard() {
       setHistoricalData(data)
     } catch (err) {
       console.error('Failed to load historical data:', err)
+    }
+  }
+
+  const loadPlatformMetrics = async () => {
+    try {
+      const data = await api.getPlatformMetrics()
+      setPlatformMetrics(data)
+    } catch (err) {
+      console.error('Failed to load platform metrics:', err)
     }
   }
 
@@ -356,7 +368,40 @@ export function Dashboard() {
   }
 
   const updatePlatformAllocation = (platform: string, value: number) => {
-    setPlatformAllocation(prev => ({ ...prev, [platform]: value }))
+    setPlatformAllocation(prev => {
+      const platforms = Object.keys(prev) as (keyof typeof prev)[]
+      const otherPlatforms = platforms.filter(p => p !== platform)
+      const currentOthersTotal = otherPlatforms.reduce((sum, p) => sum + prev[p], 0)
+      const remaining = 100 - value
+
+      // If other platforms have 0 total, distribute remaining equally
+      if (currentOthersTotal === 0) {
+        const perPlatform = Math.floor(remaining / otherPlatforms.length)
+        const newAlloc: any = { ...prev, [platform]: value }
+        otherPlatforms.forEach((p, i) => {
+          newAlloc[p] = i === otherPlatforms.length - 1
+            ? remaining - (perPlatform * (otherPlatforms.length - 1))
+            : perPlatform
+        })
+        return newAlloc
+      }
+
+      // Scale other platforms proportionally to fill remaining percentage
+      const scaleFactor = remaining / currentOthersTotal
+      const newAlloc: any = { [platform]: value }
+      let allocated = value
+      otherPlatforms.forEach((p, i) => {
+        if (i === otherPlatforms.length - 1) {
+          // Last platform gets whatever remains to ensure exactly 100%
+          newAlloc[p] = 100 - allocated
+        } else {
+          const scaled = Math.round(prev[p] * scaleFactor)
+          newAlloc[p] = scaled
+          allocated += scaled
+        }
+      })
+      return newAlloc
+    })
   }
 
   const updateContentMix = (platform: string, contentType: string, value: number) => {
@@ -612,12 +657,43 @@ export function Dashboard() {
                             value={paidAllocation[platform as keyof typeof paidAllocation]}
                             onChange={e => {
                               const val = parseInt(e.target.value)
-                              setPaidAllocation(prev => ({...prev, [platform]: val}))
+                              setPaidAllocation(prev => {
+                                const platforms = Object.keys(prev) as (keyof typeof prev)[]
+                                const otherPlatforms = platforms.filter(p => p !== platform)
+                                const currentOthersTotal = otherPlatforms.reduce((sum, p) => sum + prev[p], 0)
+                                const remaining = 100 - val
+                                if (currentOthersTotal === 0) {
+                                  const perPlatform = Math.floor(remaining / otherPlatforms.length)
+                                  const newAlloc: any = { ...prev, [platform]: val }
+                                  otherPlatforms.forEach((p, i) => {
+                                    newAlloc[p] = i === otherPlatforms.length - 1
+                                      ? remaining - (perPlatform * (otherPlatforms.length - 1))
+                                      : perPlatform
+                                  })
+                                  return newAlloc
+                                }
+                                const scaleFactor = remaining / currentOthersTotal
+                                const newAlloc: any = { [platform]: val }
+                                let allocated = val
+                                otherPlatforms.forEach((p, i) => {
+                                  if (i === otherPlatforms.length - 1) {
+                                    newAlloc[p] = 100 - allocated
+                                  } else {
+                                    const scaled = Math.round(prev[p] * scaleFactor)
+                                    newAlloc[p] = scaled
+                                    allocated += scaled
+                                  }
+                                })
+                                return newAlloc
+                              })
                             }}
                             className="slider platform-slider"
                           />
                         </div>
                       ))}
+                      <div className="allocation-total" style={{marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'right'}}>
+                        Total: {Object.values(paidAllocation).reduce((a, b) => a + b, 0)}%
+                      </div>
                       <div className="ai-note">Tip: Defaults mirror your organic platform allocation. Impressions are derived from CPM × Budget.</div>
                     </div>
                   </>
@@ -709,13 +785,16 @@ export function Dashboard() {
                     <input
                       type="range"
                       min="0"
-                      max="50"
+                      max="100"
                       value={platformAllocation[platform as keyof typeof platformAllocation]}
                       onChange={e => updatePlatformAllocation(platform, parseInt(e.target.value))}
                       className="slider platform-slider"
                     />
                   </div>
                 ))}
+                <div className="allocation-total" style={{marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'right'}}>
+                  Total: {Object.values(platformAllocation).reduce((a, b) => a + b, 0)}%
+                </div>
               </div>
             </div>
           </div>
@@ -881,7 +960,7 @@ export function Dashboard() {
             <div className={`historical-section ${historicalCollapsed ? 'collapsed' : ''}`}>
               <div className="section-header" style={{marginBottom: historicalCollapsed ? 0 : '0.75rem', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
                 <div>
-                  Historical Context (2025)
+                  Historical Context (Jan - Nov 2025)
                   <HelpTooltip text="Past performance data showing engagement trends, sentiment analysis, and popular tags over time" />
                 </div>
                 <button className="chart-mode-btn" onClick={()=> setHistoricalCollapsed(v=>!v)}>
@@ -911,10 +990,10 @@ export function Dashboard() {
                   Tags
                 </button>
                 <button
-                  className={`historical-tab ${historicalTab === 'growth' ? 'active' : ''}`}
-                  onClick={() => setHistoricalTab('growth')}
+                  className={`historical-tab ${historicalTab === 'performance' ? 'active' : ''}`}
+                  onClick={() => setHistoricalTab('performance')}
                 >
-                  Growth
+                  Performance
                 </button>
               </div>
 
@@ -968,68 +1047,59 @@ export function Dashboard() {
                   </ResponsiveContainer>
                 )}
 
-                {historicalTab === 'growth' && followerHistory && (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={(function() {
-                      // Transform data to split solid vs dashed based on interpolation flags
-                      return followerHistory.map((row: any) => {
-                        const point: any = { label: row.label }
-                        const platforms = ['Total', 'Instagram', 'TikTok', 'YouTube', 'Facebook']
-                        platforms.forEach(p => {
-                          if (row[p] !== undefined) {
-                            if (row[`${p}_interpolated`]) {
-                              point[`${p}_dashed`] = row[p]
-                            } else {
-                              point[`${p}_solid`] = row[p]
-                            }
-                            // Also keep combined for connecting line
-                            point[p] = row[p]
-                          }
-                        })
-                        return point
-                      })
-                    })()} margin={{ top: 5, right: 50, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                      <XAxis dataKey="label" stroke="var(--text-secondary)" tick={{fontSize: 10}} interval={0} angle={-45} textAnchor="end" height={50} />
-                      <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} width={45} />
-                      <Tooltip
-                        contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
-                        formatter={(value: number, name: string) => {
-                          // Only show _solid and _dashed entries, skip the combined values
-                          if (!name.includes('_solid') && !name.includes('_dashed')) return null
-                          const cleanName = name.replace('_solid', '').replace('_dashed', ' (est.)')
-                          return [(value / 1000).toFixed(0) + 'K', cleanName]
-                        }}
-                      />
-                      <Legend formatter={(value: string) => value.replace('_solid', '').replace('_dashed', '')} />
-                      {/* Dashed lines for interpolated data (behind) */}
-                      <Line type="monotone" dataKey="Total_dashed" stroke={SERIES_COLORS.total} strokeWidth={3} dot={false} strokeDasharray="6 4" connectNulls={false} legendType="none" />
-                      <Line type="monotone" dataKey="Instagram_dashed" stroke={SERIES_COLORS.instagram} strokeWidth={2} dot={false} strokeDasharray="6 4" connectNulls={false} legendType="none" />
-                      <Line type="monotone" dataKey="TikTok_dashed" stroke={SERIES_COLORS.tiktok} strokeWidth={2} dot={false} strokeDasharray="6 4" connectNulls={false} legendType="none" />
-                      <Line type="monotone" dataKey="YouTube_dashed" stroke={SERIES_COLORS.youtube} strokeWidth={2} dot={false} strokeDasharray="6 4" connectNulls={false} legendType="none" />
-                      <Line type="monotone" dataKey="Facebook_dashed" stroke={SERIES_COLORS.facebook} strokeWidth={2} dot={false} strokeDasharray="6 4" connectNulls={false} legendType="none" />
-                      {/* Solid lines for real data (on top) */}
-                      <Line type="monotone" dataKey="Total_solid" stroke={SERIES_COLORS.total} strokeWidth={3} dot={false} connectNulls={false} name="Total">
-                        <LabelList dataKey="Total" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y - 8} fill={SERIES_COLORS.total} fontSize={9} fontWeight={600}>Total</text> : null} />
-                      </Line>
-                      <Line type="monotone" dataKey="Instagram_solid" stroke={SERIES_COLORS.instagram} strokeWidth={2} dot={false} connectNulls={false} name="Instagram">
-                        <LabelList dataKey="Instagram" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y + 3} fill={SERIES_COLORS.instagram} fontSize={9} fontWeight={600}>IG</text> : null} />
-                      </Line>
-                      <Line type="monotone" dataKey="TikTok_solid" stroke={SERIES_COLORS.tiktok} strokeWidth={2} dot={false} connectNulls={false} name="TikTok">
-                        <LabelList dataKey="TikTok" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y - 5} fill={SERIES_COLORS.tiktok} fontSize={9} fontWeight={600}>TT</text> : null} />
-                      </Line>
-                      <Line type="monotone" dataKey="YouTube_solid" stroke={SERIES_COLORS.youtube} strokeWidth={2} dot={false} connectNulls={false} name="YouTube">
-                        <LabelList dataKey="YouTube" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y + 8} fill={SERIES_COLORS.youtube} fontSize={9} fontWeight={600}>YT</text> : null} />
-                      </Line>
-                      <Line type="monotone" dataKey="Facebook_solid" stroke={SERIES_COLORS.facebook} strokeWidth={2} dot={false} connectNulls={false} name="Facebook">
-                        <LabelList dataKey="Facebook" content={({x, y, index}: any) => index === (followerHistory?.length || 0) - 1 ? <text x={x + 5} y={y + 12} fill={SERIES_COLORS.facebook} fontSize={9} fontWeight={600}>FB</text> : null} />
-                      </Line>
-                    </LineChart>
-                  </ResponsiveContainer>
+                {historicalTab === 'performance' && platformMetrics && (
+                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem'}}>
+                    {/* Posts by Platform */}
+                    <div>
+                      <h4 style={{margin: '0 0 0.5rem 0', color: 'var(--text-secondary)', fontSize: '0.85rem'}}>Posts per Month by Platform</h4>
+                      <ResponsiveContainer width="100%" height={250}>
+                        <BarChart data={platformMetrics.months.map((month, idx) => ({
+                          month,
+                          TikTok: platformMetrics.posts.TikTok[idx],
+                          Instagram: platformMetrics.posts.Instagram[idx],
+                          Facebook: platformMetrics.posts.Facebook[idx],
+                          YouTube: platformMetrics.posts.YouTube[idx],
+                        }))}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                          <XAxis dataKey="month" stroke="var(--text-secondary)" tick={{fontSize: 9}} angle={-45} textAnchor="end" height={40} />
+                          <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} />
+                          <Tooltip contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}} />
+                          <Legend wrapperStyle={{fontSize: '10px'}} />
+                          <Bar dataKey="TikTok" fill="#FF6B6B" name="TikTok" />
+                          <Bar dataKey="Instagram" fill="#9370DB" name="Instagram" />
+                          <Bar dataKey="Facebook" fill="#4ECDC4" name="Facebook" />
+                          <Bar dataKey="YouTube" fill="#FF6B6B" name="YouTube" opacity={0.5} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    {/* Engagement Rate by Platform */}
+                    <div>
+                      <h4 style={{margin: '0 0 0.5rem 0', color: 'var(--text-secondary)', fontSize: '0.85rem'}}>Engagement Rate % by Platform</h4>
+                      <ResponsiveContainer width="100%" height={250}>
+                        <LineChart data={platformMetrics.months.map((month, idx) => ({
+                          month,
+                          TikTok: platformMetrics.engagement.TikTok[idx],
+                          Instagram: platformMetrics.engagement.Instagram[idx],
+                          Facebook: platformMetrics.engagement.Facebook[idx],
+                          YouTube: platformMetrics.engagement.YouTube[idx] != null && platformMetrics.engagement.YouTube[idx]! < 5 ? platformMetrics.engagement.YouTube[idx] : null,
+                        }))}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                          <XAxis dataKey="month" stroke="var(--text-secondary)" tick={{fontSize: 9}} angle={-45} textAnchor="end" height={40} />
+                          <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(v) => `${v}%`} />
+                          <Tooltip contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}} formatter={(v: number) => v != null ? `${v.toFixed(2)}%` : 'N/A'} />
+                          <Legend wrapperStyle={{fontSize: '10px'}} />
+                          <Line type="monotone" dataKey="TikTok" stroke="#FF6B6B" strokeWidth={2} dot={{r: 3}} name="TikTok" connectNulls />
+                          <Line type="monotone" dataKey="Instagram" stroke="#9370DB" strokeWidth={2} dot={{r: 3}} name="Instagram" connectNulls />
+                          <Line type="monotone" dataKey="Facebook" stroke="#4ECDC4" strokeWidth={2} dot={{r: 3}} name="Facebook" connectNulls />
+                          <Line type="monotone" dataKey="YouTube" stroke="#FF9F43" strokeWidth={2} dot={{r: 3}} name="YouTube" connectNulls />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
                 )}
-                {historicalTab === 'growth' && !followerHistory && (
+                {historicalTab === 'performance' && !platformMetrics && (
                   <div style={{padding:'2rem', textAlign:'center', color:'var(--text-secondary)'}}>
-                    No historical follower data available
+                    No platform performance data available
                   </div>
                 )}
               </div>
@@ -1070,6 +1140,17 @@ export function Dashboard() {
                       ))}
                     </div>
                   )}
+                  {/* CPF Band toggle - show when forecast/both mode and budget enabled */}
+                  {chartMode !== 'historical' && enableBudget && bandHigh && bandLow && (
+                    <label style={{display:'flex', alignItems:'center', gap:'3px', color:'var(--text-secondary)', fontSize:'0.8rem', cursor:'pointer', marginLeft:'8px', paddingLeft:'8px', borderLeft:'1px solid var(--border)'}}>
+                      <input
+                        type="checkbox"
+                        checked={showCPFBand}
+                        onChange={(e) => setShowCPFBand(e.target.checked)}
+                      />
+                      CPF Range
+                    </label>
+                  )}
                 </div>
               </div>
 
@@ -1098,22 +1179,29 @@ export function Dashboard() {
                 })
 
                 // Build forecast data points
-                const fc = (chartData||[]).map((row:any)=> ({
-                  month: row.month,
-                  Total: row.Total,
-                  Instagram: row.Instagram,
-                  TikTok: row.TikTok,
-                  YouTube: row.YouTube,
-                  Facebook: row.Facebook,
-                  Total_forecast: row.Total,
-                  Instagram_forecast: row.Instagram,
-                  TikTok_forecast: row.TikTok,
-                  YouTube_forecast: row.YouTube,
-                  Facebook_forecast: row.Facebook,
-                  BandHigh: row.BandHigh,
-                  BandLow: row.BandLow,
-                  BandDelta: row.BandDelta,
-                }))
+                const fc = (chartData||[]).map((row:any)=> {
+                  const point: any = {
+                    month: row.month,
+                    Total: row.Total,
+                    Instagram: row.Instagram,
+                    TikTok: row.TikTok,
+                    YouTube: row.YouTube,
+                    Facebook: row.Facebook,
+                    Total_forecast: row.Total,
+                    Instagram_forecast: row.Instagram,
+                    TikTok_forecast: row.TikTok,
+                    YouTube_forecast: row.YouTube,
+                    Facebook_forecast: row.Facebook,
+                    BandHigh: row.BandHigh,
+                    BandLow: row.BandLow,
+                    BandDelta: row.BandDelta,
+                  }
+                  // Include scenario data (Conservative, Optimized, Aggressive)
+                  if (row.Conservative !== undefined) point.Conservative = row.Conservative
+                  if (row.Optimized !== undefined) point.Optimized = row.Optimized
+                  if (row.Aggressive !== undefined) point.Aggressive = row.Aggressive
+                  return point
+                })
 
                 if (chartMode==='forecast') return fc
                 if (chartMode==='historical') return hist
@@ -1192,7 +1280,7 @@ export function Dashboard() {
                   strokeDasharray="5 5"
                   label={{ value: 'Goal', position: 'right', fill: 'var(--fountain-blue)' }}
                 />
-                {chartMode==='forecast' && enableBudget && bandHigh && bandLow && (
+                {chartMode!=='historical' && enableBudget && bandHigh && bandLow && showCPFBand && (
                   <>
                     <Area type="monotone" dataKey="BandLow" stackId="band" stroke="none" fill="transparent" />
                     <Area type="monotone" dataKey="BandDelta" stackId="band" stroke="none" fill={SERIES_COLORS.bandFill} />
@@ -1281,7 +1369,7 @@ export function Dashboard() {
                     </Line>)}
                   </>
                 )}
-                {chartMode==='forecast' && scenarios.map((scenario, idx) =>
+                {chartMode !== 'historical' && scenarios.map((scenario, idx) =>
                   scenario.visible && (
                     <Line
                       key={idx}
@@ -1314,7 +1402,7 @@ export function Dashboard() {
             return (
               <div className="chart-container">
                 <div className="chart-header" style={{marginBottom:'0.75rem'}}>
-                  <h2 style={{margin:0}}>Acquisition Breakdown</h2>
+                  <h2 style={{margin:0}}>Forecasted Acquisition Breakdown</h2>
                   <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
                     <div style={{fontSize:'0.8rem', color:'var(--text-secondary)'}}>
                       <span style={{fontWeight:700, color:'var(--fountain-blue)'}}>{totalOrgPct.toFixed(0)}%</span> Organic
@@ -1401,7 +1489,7 @@ export function Dashboard() {
             </div>
           )}
 
-          
+
           {/* Parameter Tuning Modal */}
           {showTune && (
             <div className="modal-backdrop" role="dialog" aria-modal="true">

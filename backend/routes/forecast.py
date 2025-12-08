@@ -238,3 +238,20 @@ async def run_forecast(request: ForecastRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/platform-metrics")
+async def get_platform_metrics():
+    """Get historical posts and engagement data by platform"""
+    import json
+    try:
+        metrics_file = DATA_DIR / "platform_metrics.json"
+        if not metrics_file.exists():
+            raise HTTPException(status_code=404, detail="Platform metrics data not found")
+        with open(metrics_file, "r") as f:
+            data = json.load(f)
+        return data
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Invalid JSON: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

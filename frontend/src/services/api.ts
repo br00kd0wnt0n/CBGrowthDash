@@ -73,6 +73,11 @@ export interface AssumptionsPayload { assumptions: any[] }
 export interface ParamSuggestion { key: string; current: number; suggested: number; reason: string; confidence: string }
 export interface ParamTuneResponse { suggestions: ParamSuggestion[] }
 export interface FollowersHistoryPayload { labels: string[]; data: Array<any> }
+export interface PlatformMetricsResponse {
+  months: string[];
+  posts: Record<string, (number | null)[]>;
+  engagement: Record<string, (number | null)[]>;
+}
 
 export const api = {
   getHistoricalData: () => request<HistoricalDataResponse>('/api/historical'),
@@ -99,4 +104,5 @@ export const api = {
     body: JSON.stringify(data),
   }),
   health: () => request<{ status: string; version: string }>('/health'),
+  getPlatformMetrics: () => request<PlatformMetricsResponse>('/api/platform-metrics'),
 };
