@@ -58,7 +58,7 @@ export function Dashboard() {
   // Paid funnel (CPM) state
   const [enablePaid, setEnablePaid] = useState(false)
   const [paidFunnelBudgetWeek, setPaidFunnelBudgetWeek] = useState(2500)
-  const [paidCPM, setPaidCPM] = useState(10)
+  const [paidCPM, setPaidCPM] = useState(5)
   const [paidAllocation, setPaidAllocation] = useState({
     Instagram: 35,
     TikTok: 35,
@@ -70,9 +70,9 @@ export function Dashboard() {
   const [paidBudgetWeek, setPaidBudgetWeek] = useState(641)        // ~$33.3k/year
   const [creatorBudgetWeek, setCreatorBudgetWeek] = useState(641)   // ~$33.3k/year
   const [acquisitionBudgetWeek, setAcquisitionBudgetWeek] = useState(641) // ~$33.3k/year (total = $100k/year)
-  const [cpfMin, setCpfMin] = useState(0.50)
-  const [cpfMid, setCpfMid] = useState(0.75)
-  const [cpfMax, setCpfMax] = useState(1.00)
+  const [cpfMin, setCpfMin] = useState(0.10)
+  const [cpfMid, setCpfMid] = useState(0.15)
+  const [cpfMax, setCpfMax] = useState(0.20)
   const [valuePerFollower, setValuePerFollower] = useState(0)
 
   // AI Insights state
@@ -716,6 +716,7 @@ export function Dashboard() {
             </div>
             <div className={`section-content ${sidebarCollapsed.audienceMix ? 'collapsed' : ''}`}>
               <div className="section-content-inner">
+                <div className="section-subtitle">Controls platform allocation based on GWI 2024 audience research</div>
                 <div className="audience-mix-section">
                   <div className="audience-slider-group">
                     <div className="audience-slider-header">
