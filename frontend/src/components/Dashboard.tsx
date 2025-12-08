@@ -1042,6 +1042,11 @@ export function Dashboard() {
                 </div>
               </div>
 
+            {/* Debug info - remove in production */}
+            <div style={{fontSize:'0.7rem', color:'var(--text-secondary)', marginBottom:'0.5rem'}}>
+              Historical: {followerHistory?.length || 0} rows | Forecast: {chartData?.length || 0} rows | Mode: {chartMode}
+            </div>
+
             {scenarios.length > 0 && (
               <div className="scenario-toggles">
                 <label className="scenario-toggle">
@@ -1063,7 +1068,7 @@ export function Dashboard() {
 
             <ResponsiveContainer width="100%" height={400}>
               <ComposedChart data={(function(){
-                if (chartMode==='forecast') return chartData
+                // Build historical data points with _hist suffix
                 const hist = (followerHistory||[]).map((row:any, idx:number)=> ({
                   month: row.label || `H${idx+1}`,
                   Total_hist: row.Total,
@@ -1072,16 +1077,28 @@ export function Dashboard() {
                   YouTube_hist: row.YouTube,
                   Facebook_hist: row.Facebook,
                 }))
-                if (chartMode==='historical') return hist
-                // both: concatenate
-                const fc = chartData.map((row:any)=> ({
+
+                // Build forecast data points
+                const fc = (chartData||[]).map((row:any)=> ({
                   month: row.month,
+                  Total: row.Total,
+                  Instagram: row.Instagram,
+                  TikTok: row.TikTok,
+                  YouTube: row.YouTube,
+                  Facebook: row.Facebook,
                   Total_forecast: row.Total,
                   Instagram_forecast: row.Instagram,
                   TikTok_forecast: row.TikTok,
                   YouTube_forecast: row.YouTube,
                   Facebook_forecast: row.Facebook,
+                  BandHigh: row.BandHigh,
+                  BandLow: row.BandLow,
+                  BandDelta: row.BandDelta,
                 }))
+
+                if (chartMode==='forecast') return fc
+                if (chartMode==='historical') return hist
+                // 'both' mode: concatenate historical then forecast
                 return [...hist, ...fc]
               })()}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
