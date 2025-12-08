@@ -1135,19 +1135,47 @@ export function Dashboard() {
                 <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} width={45} />
                 <Tooltip
                   contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
-                  formatter={(value: number, name: string) => {
+                  formatter={(value: number, name: string, props: any) => {
                     // Skip null/undefined values
                     if (value === null || value === undefined) return null
-                    // Skip forecast entries when in historical mode
-                    if (chartMode === 'historical' && (name.includes('_forecast') || name === 'Total' || name === 'Instagram' || name === 'TikTok' || name === 'YouTube' || name === 'Facebook')) return null
                     // Skip Band entries (they have their own labels)
                     if (name.includes('Band')) return null
+                    // Skip scenario entries (AI scenarios)
+                    if (['Optimized', 'Conservative', 'Aggressive'].includes(name)) return null
+
+                    // In historical mode, only show historical entries
+                    if (chartMode === 'historical') {
+                      if (!name.includes('_hist')) return null
+                    }
+                    // In forecast mode, only show forecast entries (no _hist suffix)
+                    if (chartMode === 'forecast') {
+                      if (name.includes('_hist')) return null
+                    }
+                    // In 'both' mode, check if this is a historical or forecast data point
+                    if (chartMode === 'both') {
+                      const payload = props?.payload || {}
+                      const isHistoricalPoint = payload.Total_hist !== undefined || payload.Total_hist_all !== undefined
+                      const isForecastPoint = payload.Total !== undefined && !payload.Total_hist && !payload.Total_hist_all
+
+                      // For historical points, only show _hist entries
+                      if (isHistoricalPoint && !isForecastPoint) {
+                        if (!name.includes('_hist')) return null
+                      }
+                      // For forecast points, only show non-_hist entries
+                      if (isForecastPoint && !isHistoricalPoint) {
+                        if (name.includes('_hist')) return null
+                      }
+                      // For bridge points (last historical with forecast values), show only historical
+                      if (isHistoricalPoint && isForecastPoint) {
+                        if (!name.includes('_hist')) return null
+                      }
+                    }
+
                     // Clean up the dataKey name for display
                     let displayName = name
                       .replace('_hist_all', ' (est.)')
                       .replace('_hist', '')
-                      .replace('_forecast', ' (fcst)')
-                      .replace('Total', 'Total')
+                      .replace('_forecast', '')
                     return [(value / 1000).toFixed(0) + 'K', displayName]
                   }}
                 />
