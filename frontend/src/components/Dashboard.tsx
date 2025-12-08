@@ -93,8 +93,6 @@ export function Dashboard() {
     YouTube: true,
     Facebook: true,
   })
-  // Month selector for acquisition breakdown
-  const [selectedBreakdownIndex, setSelectedBreakdownIndex] = useState<number>(0)
   // Collapsible sections
   const [historicalCollapsed, setHistoricalCollapsed] = useState<boolean>(true)
   // Sidebar section collapse states
@@ -336,52 +334,10 @@ export function Dashboard() {
     }
   }
 
-  // Dynamic AI insight (single, contextual). Debounced refresh when >5% change.
-  const [aiInsight, setAiInsight] = useState<string>('')
-  const [aiLoadingCompact, setAiLoadingCompact] = useState(false)
-  const [lastInsightKey, setLastInsightKey] = useState<string>('')
   // LLM Parameter Tuning modal state
   const [showTune, setShowTune] = useState(false)
   const [tuneLoading, setTuneLoading] = useState(false)
   const [tuneSuggestions, setTuneSuggestions] = useState<{key:string; current:number; suggested:number; reason:string; confidence:string; accept?:boolean}[]>([])
-  useEffect(() => {
-    const keyObj = {
-      goal: goalFollowers,
-      projected_total: projectedTotal,
-      posts_per_week_total: postsPerWeek,
-      platform_allocation: platformAllocation,
-      months,
-    }
-    const key = JSON.stringify(keyObj)
-    const prev = lastInsightKey ? JSON.parse(lastInsightKey) : null
-    const pct = (a:number,b:number)=> b>0? Math.abs((a-b)/b)*100 : 0
-    const changedMeaningfully = prev ? pct(projectedTotal, prev.projected_total) > 5 : true
-    const timer = setTimeout(async () => {
-      if (!changedMeaningfully || key === lastInsightKey) return
-      setAiLoadingCompact(true)
-      try {
-        const cached = (window as any)._insightCache || {}
-        if (cached[key]) { setAiInsight(cached[key]); setAiLoadingCompact(false); setLastInsightKey(key); return }
-        const resp = await api.getAIInsight({
-          goal: goalFollowers,
-          projected_total: projectedTotal,
-          posts_per_week_total: postsPerWeek,
-          platform_allocation: platformAllocation,
-          months,
-          progress_to_goal: goalFollowers>0? (projectedTotal/goalFollowers)*100 : 0,
-        })
-        setAiInsight(resp.insight)
-        ;(window as any)._insightCache = { ...(window as any)._insightCache, [key]: resp.insight }
-        setLastInsightKey(key)
-      } catch (e) {
-        // ignore
-      } finally {
-        setAiLoadingCompact(false)
-      }
-    }, 2000)
-    return () => clearTimeout(timer)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectedTotal, postsPerWeek, platformAllocation, months, goalFollowers])
 
   const toggleScenario = (index: number) => {
     setScenarios(prev => prev.map((s, i) =>
@@ -447,23 +403,6 @@ export function Dashboard() {
 
     return dataPoint
   }) || []
-
-  // Keep selected month in range when results change (default to latest)
-  useEffect(() => {
-    const list = forecastResults?.added_breakdown || []
-    if (list.length > 0) {
-      setSelectedBreakdownIndex(Math.max(0, Math.min(list.length - 1, selectedBreakdownIndex)))
-    }
-  }, [forecastResults?.added_breakdown])
-
-  // Breakdown (selected month)
-  const breakdownList = forecastResults?.added_breakdown || []
-  const selectedBreakdown = breakdownList[selectedBreakdownIndex]
-  const lastPaid = selectedBreakdown ? selectedBreakdown.paid_added : 0
-  const lastOrg = selectedBreakdown ? selectedBreakdown.organic_added : 0
-  const lastTotalAdded = selectedBreakdown ? selectedBreakdown.total_added : 0
-  const paidPct = lastTotalAdded > 0 ? (lastPaid / lastTotalAdded) * 100 : 0
-  const orgPct = lastTotalAdded > 0 ? (lastOrg / lastTotalAdded) * 100 : 0
 
   const riskLevel = postsPerWeek > 35 ? 'HIGH' : postsPerWeek > 28 ? 'MEDIUM' : 'LOW'
   const riskColor = riskLevel === 'HIGH' ? 'var(--bittersweet)' : riskLevel === 'MEDIUM' ? 'var(--texas-rose)' : 'var(--fountain-blue)'
@@ -1119,12 +1058,15 @@ export function Dashboard() {
                   {/* AI Scenario toggles - only show when forecast/both is visible */}
                   {chartMode !== 'historical' && scenarios.length > 0 && (
                     <div style={{display:'flex', gap:'6px', marginLeft:'auto', paddingLeft:'12px', borderLeft:'1px solid var(--border)'}}>
-                      {scenarios.map((scenario, idx) => (
-                        <label key={idx} style={{display:'flex', alignItems:'center', gap:'3px', color: scenario.color, fontSize:'0.8rem', cursor:'pointer'}}>
+                      {[...scenarios].sort((a, b) => {
+                        const order: {[key: string]: number} = { 'Conservative': 0, 'Optimized': 1, 'Aggressive': 2 }
+                        return (order[a.name] ?? 99) - (order[b.name] ?? 99)
+                      }).map((scenario) => (
+                        <label key={scenario.name} style={{display:'flex', alignItems:'center', gap:'3px', color: scenario.color, fontSize:'0.8rem', cursor:'pointer'}}>
                           <input
                             type="checkbox"
                             checked={scenario.visible}
-                            onChange={() => toggleScenario(idx)}
+                            onChange={() => toggleScenario(scenarios.findIndex(s => s.name === scenario.name))}
                           />
                           {scenario.name}
                         </label>
@@ -1182,7 +1124,6 @@ export function Dashboard() {
                 // Add forecast values to last historical point to create bridge
                 if (hist.length > 0 && fc.length > 0) {
                   const lastHist = hist[hist.length - 1]
-                  const firstFc = fc[0]
                   // Copy forecast keys to last historical point to connect the lines
                   lastHist.Total_forecast = lastHist.Total_hist_all || lastHist.Total_hist
                   lastHist.Instagram_forecast = lastHist.Instagram_hist_all || lastHist.Instagram_hist
@@ -1271,7 +1212,7 @@ export function Dashboard() {
                   <>
                     {/* Forecast dashed continuation - labels shown at far right */}
                     {showPlatforms.Total && (<Line type="monotone" dataKey="Total_forecast" stroke={SERIES_COLORS.total} strokeWidth={4} dot={false} strokeDasharray="6 6" name="Total (forecast)">
-                      <LabelList dataKey="Total_forecast" content={({x, y, index, payload}: any) => {
+                      <LabelList dataKey="Total_forecast" content={({x, y, index}: any) => {
                         const combinedLen = (followerHistory?.length || 0) + (chartData?.length || 0)
                         return index === combinedLen - 1 ? <text x={x + 5} y={y - 8} fill={SERIES_COLORS.total} fontSize={9} fontWeight={600}>Total</text> : null
                       }} />
@@ -1319,11 +1260,74 @@ export function Dashboard() {
             </ResponsiveContainer>
           </div>
 
+          {/* Acquisition Breakdown */}
+          {forecastResults?.added_breakdown && (() => {
+            const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            const startMonth = new Date().getMonth() // 0-indexed, current month
+            const startYear = new Date().getFullYear() + 1 // Next year (2026)
+
+            // Calculate totals for summary
+            const totalOrganic = forecastResults.added_breakdown.reduce((sum, b) => sum + (b.organic_added || 0), 0)
+            const totalPaid = forecastResults.added_breakdown.reduce((sum, b) => sum + (b.paid_added || 0), 0)
+            const grandTotal = totalOrganic + totalPaid
+            const totalPaidPct = grandTotal > 0 ? (totalPaid / grandTotal) * 100 : 0
+            const totalOrgPct = 100 - totalPaidPct
+
+            return (
+              <div className="chart-container">
+                <div className="chart-header" style={{marginBottom:'0.75rem'}}>
+                  <h2 style={{margin:0}}>Acquisition Breakdown</h2>
+                  <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                    <div style={{fontSize:'0.8rem', color:'var(--text-secondary)'}}>
+                      <span style={{fontWeight:700, color:'var(--fountain-blue)'}}>{totalOrgPct.toFixed(0)}%</span> Organic
+                    </div>
+                    <div style={{width:'80px', height:'8px', background:'var(--bg-secondary)', borderRadius:'4px', overflow:'hidden', border:'1px solid var(--border)'}}>
+                      <div style={{width:`${totalPaidPct}%`, height:'100%', background:'var(--primary)'}}></div>
+                    </div>
+                    <div style={{fontSize:'0.8rem', color:'var(--text-secondary)'}}>
+                      <span style={{fontWeight:700, color:'var(--primary)'}}>{totalPaidPct.toFixed(0)}%</span> Paid
+                    </div>
+                  </div>
+                </div>
+                <div style={{display:'flex', gap:'6px', overflowX:'auto', paddingBottom:'4px'}}>
+                  {forecastResults.added_breakdown.map((breakdown, idx) => {
+                    const monthTotal = (breakdown.organic_added || 0) + (breakdown.paid_added || 0)
+                    const monthPaidPct = monthTotal > 0 ? ((breakdown.paid_added || 0) / monthTotal) * 100 : 0
+                    const monthIdx = (startMonth + idx) % 12
+                    const yearOffset = Math.floor((startMonth + idx) / 12)
+                    const year = startYear + yearOffset
+                    return (
+                      <div key={idx} style={{
+                        flex: '1 1 0',
+                        minWidth: '58px',
+                        background: 'var(--bg-primary)',
+                        borderRadius: '8px',
+                        padding: '6px 4px',
+                        border: '1px solid var(--border)',
+                        textAlign: 'center'
+                      }}>
+                        <div style={{fontSize:'0.65rem', fontWeight:700, color:'var(--text-secondary)', marginBottom:'2px'}}>{MONTH_NAMES[monthIdx]}</div>
+                        <div style={{fontSize:'0.55rem', color:'var(--text-secondary)', marginBottom:'3px'}}>{year}</div>
+                        <div style={{fontSize:'0.85rem', fontWeight:800, color:'var(--fountain-blue)'}}>{(monthTotal/1000).toFixed(0)}K</div>
+                        <div style={{height:'4px', background:'var(--bg-secondary)', borderRadius:'2px', overflow:'hidden', margin:'3px 0'}}>
+                          <div style={{width:`${monthPaidPct}%`, height:'100%', background:'var(--primary)'}}></div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
+
           {scenarios.length > 0 && (
             <div className="scenarios-comparison">
               <h3 className="section-header">AI Scenario Comparison</h3>
               <div className="scenarios-grid">
-                {scenarios.map((scenario, idx) => (
+                {[...scenarios].sort((a, b) => {
+                  const order: {[key: string]: number} = { 'Conservative': 0, 'Optimized': 1, 'Aggressive': 2 }
+                  return (order[a.name] ?? 99) - (order[b.name] ?? 99)
+                }).map((scenario, idx) => (
                   <div key={idx} className="scenario-card" style={{borderColor: scenario.color}}>
                     <div className="scenario-header">
                       <h4 style={{color: scenario.color}}>{scenario.name}</h4>
@@ -1355,40 +1359,6 @@ export function Dashboard() {
                     </div>
                   </div>
                 ))}
-              </div>
-            </div>
-          )}
-
-          {/* Acquisition Breakdown */}
-          {forecastResults?.added_breakdown && (
-            <div className="chart-container">
-              <div className="chart-header">
-                <h2 style={{margin:0}}>Acquisition Breakdown</h2>
-              </div>
-              <div style={{display:'flex', gap:'8px', overflowX:'auto', paddingBottom:'4px'}}>
-                {forecastResults.added_breakdown.map((breakdown, idx) => {
-                  const monthTotal = (breakdown.organic || 0) + (breakdown.paid || 0)
-                  const monthPaidPct = monthTotal > 0 ? ((breakdown.paid || 0) / monthTotal) * 100 : 0
-                  const monthOrgPct = 100 - monthPaidPct
-                  return (
-                    <div key={idx} style={{
-                      flex: '1 1 0',
-                      minWidth: '70px',
-                      background: 'var(--bg-primary)',
-                      borderRadius: '8px',
-                      padding: '8px',
-                      border: '1px solid var(--border)',
-                      textAlign: 'center'
-                    }}>
-                      <div style={{fontSize:'0.7rem', fontWeight:700, color:'var(--text-secondary)', marginBottom:'4px'}}>M{idx+1}</div>
-                      <div style={{fontSize:'0.9rem', fontWeight:800, color:'var(--fountain-blue)'}}>{(monthTotal/1000).toFixed(0)}K</div>
-                      <div style={{height:'6px', background:'var(--bg-secondary)', borderRadius:'3px', overflow:'hidden', margin:'4px 0'}}>
-                        <div style={{width:`${monthPaidPct}%`, height:'100%', background:'var(--primary)'}}></div>
-                      </div>
-                      <div style={{fontSize:'0.6rem', color:'var(--text-secondary)'}}>{monthPaidPct.toFixed(0)}% paid</div>
-                    </div>
-                  )
-                })}
               </div>
             </div>
           )}

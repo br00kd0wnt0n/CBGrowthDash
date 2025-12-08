@@ -10,7 +10,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #b8b0b2 0%, #bdb7ad 100%);
+  background: linear-gradient(135deg, #9a9294 0%, #a09a90 100%);
   color: #2d3748;
   min-height: 100vh;
 }
@@ -39,7 +39,7 @@ body {
   --bg-primary: #ffffff;
   --bg-secondary: #fafafa;
   --bg-tertiary: #f5f5f5;
-  --bg-gradient: linear-gradient(135deg, #b8b0b2 0%, #bdb7ad 100%);
+  --bg-gradient: linear-gradient(135deg, #9a9294 0%, #a09a90 100%);
 
   /* Text colors */
   --text-primary: #2d3748;

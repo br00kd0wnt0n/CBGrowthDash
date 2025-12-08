@@ -897,10 +897,11 @@
 
 /* Scenarios Comparison */
 .scenarios-comparison {
-  background: var(--bg-secondary);
+  background: linear-gradient(135deg, rgba(147, 112, 219, 0.15), rgba(255, 140, 66, 0.12));
+  border: 1px solid rgba(147, 112, 219, 0.35);
   border-radius: 16px;
-  padding: 2rem;
-  box-shadow: var(--shadow-sm);
+  padding: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .scenarios-grid {
@@ -911,11 +912,12 @@
 }
 
 .scenario-card {
-  background: var(--bg-primary);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 12px;
   padding: 1.5rem;
   border: 3px solid;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .scenario-card:hover {
