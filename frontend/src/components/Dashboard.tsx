@@ -1868,6 +1868,18 @@ export function Dashboard() {
                   <p className="assessment-summary">{strategyCritique.overall_assessment.summary}</p>
                 </div>
 
+                {/* GWI Alignment Notes - Prominent Position */}
+                {strategyCritique.gwi_alignment_notes.length > 0 && (
+                  <div className="gwi-notes">
+                    <h4>GWI Research Alignment</h4>
+                    <ul>
+                      {strategyCritique.gwi_alignment_notes.map((note, idx) => (
+                        <li key={idx}>{note}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 {/* Category Assessments */}
                 <div className="category-assessments">
                   <h4>Category Breakdown</h4>
@@ -1911,18 +1923,6 @@ export function Dashboard() {
                     </div>
                   ))}
                 </div>
-
-                {/* GWI Alignment Notes */}
-                {strategyCritique.gwi_alignment_notes.length > 0 && (
-                  <div className="gwi-notes">
-                    <h4>GWI Research Alignment</h4>
-                    <ul>
-                      {strategyCritique.gwi_alignment_notes.map((note, idx) => (
-                        <li key={idx}>{note}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </div>
             )}
 
