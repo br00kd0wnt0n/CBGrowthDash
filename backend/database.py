@@ -26,8 +26,12 @@ Base = declarative_base()
 
 def get_db():
     """Dependency for getting database session"""
+    from fastapi import HTTPException
     if SessionLocal is None:
-        raise Exception("Database not configured. Set DATABASE_URL environment variable.")
+        raise HTTPException(
+            status_code=503,
+            detail="Database not configured. Set DATABASE_URL environment variable."
+        )
     db = SessionLocal()
     try:
         yield db
