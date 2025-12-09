@@ -59,13 +59,24 @@ async def openai_status():
     key_present = api_key is not None and len(api_key) > 10
     key_prefix = api_key[:10] + "..." if key_present else None
 
-    from services.ai_service import get_openai_client
-    client = get_openai_client()
+    # Try to initialize client and capture any error
+    client = None
+    init_error = None
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key) if api_key else None
+        # Test it works
+        if client:
+            models = client.models.list()
+            init_error = None
+    except Exception as e:
+        init_error = str(e)
 
     return {
         "key_present": key_present,
         "key_prefix": key_prefix,
-        "client_initialized": client is not None
+        "client_initialized": client is not None,
+        "init_error": init_error
     }
 
 
