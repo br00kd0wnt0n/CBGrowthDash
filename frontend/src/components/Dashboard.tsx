@@ -91,10 +91,10 @@ export function Dashboard() {
   const [showCPFBand, setShowCPFBand] = useState(false) // toggle for CPF range visualization - OFF by default
   // Followers history for combined chart and mode toggle
   const [followerHistory, setFollowerHistory] = useState<any[] | null>(null)
-  const [chartMode, setChartMode] = useState<'historical'|'forecast'|'both'>('historical') // HIST view by default
+  const [chartMode, setChartMode] = useState<'historical'|'forecast'|'both'>('both') // BOTH view by default
   // Platform visibility toggles
   const [showPlatforms, setShowPlatforms] = useState<{Total:boolean; Instagram:boolean; TikTok:boolean; YouTube:boolean; Facebook:boolean}>({
-    Total: true,
+    Total: false,
     Instagram: true,
     TikTok: true,
     YouTube: true,
@@ -1469,24 +1469,6 @@ export function Dashboard() {
                       </label>
                     ))}
                   </div>
-                  {/* AI Scenario toggles - only show when forecast/both is visible */}
-                  {chartMode !== 'historical' && scenarios.length > 0 && (
-                    <div style={{display:'flex', gap:'6px', marginLeft:'auto', paddingLeft:'12px', borderLeft:'1px solid var(--border)'}}>
-                      {[...scenarios].sort((a, b) => {
-                        const order: {[key: string]: number} = { 'Conservative': 0, 'Optimized': 1, 'Aggressive': 2 }
-                        return (order[a.name] ?? 99) - (order[b.name] ?? 99)
-                      }).map((scenario) => (
-                        <label key={scenario.name} style={{display:'flex', alignItems:'center', gap:'3px', color: scenario.color, fontSize:'0.8rem', cursor:'pointer'}}>
-                          <input
-                            type="checkbox"
-                            checked={scenario.visible}
-                            onChange={() => toggleScenario(scenarios.findIndex(s => s.name === scenario.name))}
-                          />
-                          {scenario.name}
-                        </label>
-                      ))}
-                    </div>
-                  )}
                   {/* CPF Band toggle - show when forecast/both mode and budget enabled */}
                   {chartMode !== 'historical' && enableBudget && bandHigh && bandLow && (
                     <label style={{display:'flex', alignItems:'center', gap:'3px', color:'var(--text-secondary)', fontSize:'0.8rem', cursor:'pointer', marginLeft:'8px', paddingLeft:'8px', borderLeft:'1px solid var(--border)'}}>
