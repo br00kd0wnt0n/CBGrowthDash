@@ -71,10 +71,67 @@ async def get_assumptions_plain():
 
 @router.get("/followers-history")
 async def followers_history(sheet_path: str | None = None):
-    """Return historical follower series parsed from the workbook.
-    Uses the public workbook by default ("Care Bears Audience Growth KPis .xlsx").
+    """Return historical follower series parsed from the workbook or CSV.
+    Prioritizes the CSV file with 2025 data if available.
+    Extrapolates Oct-Dec 2025 if missing.
     """
     try:
+        # First try CSV file with 2025 historical data
+        csv_path = DATA_DIR / "followers_history_2025.csv"
+        if csv_path.exists():
+            df = pd.read_csv(csv_path)
+            data_rows = []
+            labels = []
+            platforms = ['Instagram', 'TikTok', 'Facebook', 'YouTube']
+
+            for _, row in df.iterrows():
+                month_str = row['Month']
+                # Parse month and format as "Jan 2025"
+                try:
+                    dt = pd.to_datetime(month_str)
+                    label = dt.strftime('%b %Y')
+                except:
+                    label = str(month_str)
+                labels.append(label)
+                data_rows.append({
+                    "label": label,
+                    "Instagram": float(row.get('Instagram', 0)),
+                    "TikTok": float(row.get('TikTok', 0)),
+                    "Facebook": float(row.get('Facebook', 0)),
+                    "YouTube": float(row.get('YouTube', 0)),
+                    "Total": float(row.get('Total', 0)),
+                })
+
+            # Extrapolate Oct-Dec 2025 if we only have through Sep
+            if len(data_rows) >= 2 and labels[-1] == 'Sep 2025':
+                # Calculate average monthly growth rate from last 3 months
+                recent_growth = {}
+                for p in platforms:
+                    if len(data_rows) >= 3:
+                        g1 = data_rows[-1][p] - data_rows[-2][p]
+                        g2 = data_rows[-2][p] - data_rows[-3][p]
+                        recent_growth[p] = (g1 + g2) / 2
+                    else:
+                        recent_growth[p] = data_rows[-1][p] - data_rows[-2][p]
+
+                # Project Oct, Nov, Dec 2025
+                last_row = data_rows[-1]
+                for i, month_label in enumerate(['Oct 2025', 'Nov 2025', 'Dec 2025'], 1):
+                    projected = {"label": month_label}
+                    total = 0.0
+                    for p in platforms:
+                        val = last_row[p] + (recent_growth[p] * i)
+                        projected[p] = float(val)
+                        projected[f'{p}_interpolated'] = True
+                        total += val
+                    projected['Total'] = float(total)
+                    projected['Total_interpolated'] = True
+                    labels.append(month_label)
+                    data_rows.append(projected)
+
+            return {"labels": labels, "data": data_rows}
+
+        # Fallback to Excel workbook
         wb = Path(sheet_path) if sheet_path else (Path(__file__).resolve().parents[2] / 'public' / 'Care Bears Audience Growth KPis .xlsx')
         if not wb.exists():
             return {"labels": [], "data": []}
