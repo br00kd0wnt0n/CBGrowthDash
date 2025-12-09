@@ -79,7 +79,7 @@ export function Dashboard() {
   const [aiInsights, setAiInsights] = useState<AIInsightsResponse | null>(null)
   const [scenarios, setScenarios] = useState<ScenarioWithForecast[]>([])
   const [expandedContentMix, setExpandedContentMix] = useState<string | null>(null)
-  const [historicalTab, setHistoricalTab] = useState<'mentions' | 'sentiment' | 'tags' | 'performance' | 'topPosts'>('mentions')
+  const [historicalTab, setHistoricalTab] = useState<'posts' | 'views' | 'engagement' | 'topPosts'>('posts')
 
   // Top Posts data - flags for highest peaks in historical data
   const [topPosts] = useState<Array<{
@@ -1186,7 +1186,7 @@ export function Dashboard() {
             <div className={`historical-section ${historicalCollapsed ? 'collapsed' : ''}`}>
               <div className="section-header" style={{marginBottom: historicalCollapsed ? 0 : '0.75rem', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
                 <div>
-                  Historical Context (Jan - Nov 2025)
+                  Historical Context (Jan - Sept 2025)
                   <HelpTooltip text="Past performance data showing engagement trends, sentiment analysis, and popular tags over time" />
                 </div>
                 <button className="chart-mode-btn" onClick={()=> setHistoricalCollapsed(v=>!v)}>
@@ -1198,22 +1198,22 @@ export function Dashboard() {
               <>
               <div className="historical-tabs">
                 <button
-                  className={`historical-tab ${historicalTab === 'mentions' ? 'active' : ''}`}
-                  onClick={() => setHistoricalTab('mentions')}
+                  className={`historical-tab ${historicalTab === 'posts' ? 'active' : ''}`}
+                  onClick={() => setHistoricalTab('posts')}
                 >
-                  Mentions
+                  Posts
                 </button>
                 <button
-                  className={`historical-tab ${historicalTab === 'sentiment' ? 'active' : ''}`}
-                  onClick={() => setHistoricalTab('sentiment')}
+                  className={`historical-tab ${historicalTab === 'views' ? 'active' : ''}`}
+                  onClick={() => setHistoricalTab('views')}
                 >
-                  Sentiment
+                  Views
                 </button>
                 <button
-                  className={`historical-tab ${historicalTab === 'tags' ? 'active' : ''}`}
-                  onClick={() => setHistoricalTab('tags')}
+                  className={`historical-tab ${historicalTab === 'engagement' ? 'active' : ''}`}
+                  onClick={() => setHistoricalTab('engagement')}
                 >
-                  Tags
+                  Engagement
                 </button>
                 <button
                   className={`historical-tab ${historicalTab === 'topPosts' ? 'active' : ''}`}
@@ -1221,127 +1221,87 @@ export function Dashboard() {
                 >
                   Top Posts
                 </button>
-                <button
-                  className={`historical-tab ${historicalTab === 'performance' ? 'active' : ''}`}
-                  onClick={() => setHistoricalTab('performance')}
-                >
-                  Performance
-                </button>
               </div>
 
               <div className="historical-chart-container">
-                {historicalTab === 'mentions' && (
+                {historicalTab === 'posts' && platformMetrics && (
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={historicalData.mentions}>
+                    <BarChart data={platformMetrics.months.map((month, idx) => ({
+                      month,
+                      TikTok: platformMetrics.posts.TikTok[idx],
+                      Instagram: platformMetrics.posts.Instagram[idx],
+                      Facebook: platformMetrics.posts.Facebook[idx],
+                      YouTube: platformMetrics.posts.YouTube[idx],
+                    }))}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                      <XAxis dataKey="Time" stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(v) => v ? v.slice(5, 10) : ''} />
-                      <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(v) => v >= 1000000 ? `${(v/1000000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : v} width={50} />
-                      <Tooltip
-                        contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
-                        formatter={(value: number) => [value.toLocaleString(), 'Mentions']}
-                        labelFormatter={(label) => label ? label.slice(0, 10) : ''}
-                      />
-                      <Legend />
-                      <Line type="monotone" dataKey="Mentions" stroke={SERIES_COLORS.mentions} strokeWidth={2.5} />
-                      {/* Top Posts markers */}
-                      <ReferenceLine x="2025-07-07 01:00:00" stroke="#FFD700" strokeWidth={2} strokeDasharray="4 4" label={{ value: '#1', position: 'top', fill: '#FFD700', fontSize: 11, fontWeight: 700 }} />
-                      <ReferenceLine x="2025-07-28 01:00:00" stroke="#C0C0C0" strokeWidth={2} strokeDasharray="4 4" label={{ value: '#2', position: 'top', fill: '#C0C0C0', fontSize: 11, fontWeight: 700 }} />
-                      <ReferenceLine x="2025-09-01 01:00:00" stroke="#CD7F32" strokeWidth={2} strokeDasharray="4 4" label={{ value: '#3', position: 'top', fill: '#CD7F32', fontSize: 11, fontWeight: 700 }} />
-                    </LineChart>
+                      <XAxis dataKey="month" stroke="var(--text-secondary)" tick={{fontSize: 10}} />
+                      <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} />
+                      <Tooltip contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}} />
+                      <Legend wrapperStyle={{fontSize: '11px'}} />
+                      <Bar dataKey="TikTok" fill="#FF6B6B" name="TikTok" />
+                      <Bar dataKey="Instagram" fill="#9370DB" name="Instagram" />
+                      <Bar dataKey="Facebook" fill="#4ECDC4" name="Facebook" />
+                      <Bar dataKey="YouTube" fill="#FF9F43" name="YouTube" />
+                    </BarChart>
                   </ResponsiveContainer>
                 )}
-
-                {historicalTab === 'sentiment' && (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={historicalData.sentiment}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                      <XAxis dataKey="Time" stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(v) => v ? v.slice(5, 10) : ''} />
-                      <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(v) => v >= 1000000 ? `${(v/1000000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : v} width={50} />
-                      <Tooltip
-                        contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
-                        formatter={(value: number, name: string) => [value.toLocaleString(), name]}
-                        labelFormatter={(label) => label ? label.slice(0, 10) : ''}
-                      />
-                      <Legend />
-                      <Line type="monotone" dataKey="Positive" stroke={SERIES_COLORS.sentimentPos} strokeWidth={2.5} />
-                      <Line type="monotone" dataKey="Neutral" stroke={SERIES_COLORS.sentimentNeu} strokeWidth={2.5} />
-                      <Line type="monotone" dataKey="Negative" stroke={SERIES_COLORS.sentimentNeg} strokeWidth={2.5} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
-
-                {historicalTab === 'tags' && (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={historicalData.tags}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                      <XAxis dataKey="Time" stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(v) => v ? v.slice(5, 10) : ''} />
-                      <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(v) => v >= 1000000 ? `${(v/1000000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : v} width={50} />
-                      <Tooltip
-                        contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
-                        formatter={(value: number, name: string) => [value.toLocaleString(), name]}
-                        labelFormatter={(label) => label ? label.slice(0, 10) : ''}
-                      />
-                      <Legend />
-                      <Line type="monotone" dataKey="Official Care Bears" stroke={SERIES_COLORS.tag1} strokeWidth={2.5} name="Official Care Bears" />
-                      <Line type="monotone" dataKey="Stranger Things" stroke={SERIES_COLORS.tag2} strokeWidth={2.5} name="Stranger Things" />
-                      <Line type="monotone" dataKey="Wicked" stroke={SERIES_COLORS.tag3} strokeWidth={2.5} name="Wicked" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
-
-                {historicalTab === 'performance' && platformMetrics && (
-                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem'}}>
-                    {/* Posts by Platform */}
-                    <div>
-                      <h4 style={{margin: '0 0 0.5rem 0', color: 'var(--text-secondary)', fontSize: '0.85rem'}}>Posts per Month by Platform</h4>
-                      <ResponsiveContainer width="100%" height={250}>
-                        <BarChart data={platformMetrics.months.map((month, idx) => ({
-                          month,
-                          TikTok: platformMetrics.posts.TikTok[idx],
-                          Instagram: platformMetrics.posts.Instagram[idx],
-                          Facebook: platformMetrics.posts.Facebook[idx],
-                          YouTube: platformMetrics.posts.YouTube[idx],
-                        }))}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                          <XAxis dataKey="month" stroke="var(--text-secondary)" tick={{fontSize: 9}} angle={-45} textAnchor="end" height={40} />
-                          <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} />
-                          <Tooltip contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}} />
-                          <Legend wrapperStyle={{fontSize: '10px'}} />
-                          <Bar dataKey="TikTok" fill="#FF6B6B" name="TikTok" />
-                          <Bar dataKey="Instagram" fill="#9370DB" name="Instagram" />
-                          <Bar dataKey="Facebook" fill="#4ECDC4" name="Facebook" />
-                          <Bar dataKey="YouTube" fill="#FF6B6B" name="YouTube" opacity={0.5} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                    {/* Engagement Rate by Platform */}
-                    <div>
-                      <h4 style={{margin: '0 0 0.5rem 0', color: 'var(--text-secondary)', fontSize: '0.85rem'}}>Engagement Rate % by Platform</h4>
-                      <ResponsiveContainer width="100%" height={250}>
-                        <LineChart data={platformMetrics.months.map((month, idx) => ({
-                          month,
-                          TikTok: platformMetrics.engagement.TikTok[idx],
-                          Instagram: platformMetrics.engagement.Instagram[idx],
-                          Facebook: platformMetrics.engagement.Facebook[idx],
-                          YouTube: platformMetrics.engagement.YouTube[idx] != null && platformMetrics.engagement.YouTube[idx]! < 5 ? platformMetrics.engagement.YouTube[idx] : null,
-                        }))}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                          <XAxis dataKey="month" stroke="var(--text-secondary)" tick={{fontSize: 9}} angle={-45} textAnchor="end" height={40} />
-                          <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(v) => `${v}%`} />
-                          <Tooltip contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}} formatter={(v: number) => v != null ? `${v.toFixed(2)}%` : 'N/A'} />
-                          <Legend wrapperStyle={{fontSize: '10px'}} />
-                          <Line type="monotone" dataKey="TikTok" stroke="#FF6B6B" strokeWidth={2} dot={{r: 3}} name="TikTok" connectNulls />
-                          <Line type="monotone" dataKey="Instagram" stroke="#9370DB" strokeWidth={2} dot={{r: 3}} name="Instagram" connectNulls />
-                          <Line type="monotone" dataKey="Facebook" stroke="#4ECDC4" strokeWidth={2} dot={{r: 3}} name="Facebook" connectNulls />
-                          <Line type="monotone" dataKey="YouTube" stroke="#FF9F43" strokeWidth={2} dot={{r: 3}} name="YouTube" connectNulls />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
+                {historicalTab === 'posts' && !platformMetrics && (
+                  <div style={{padding:'2rem', textAlign:'center', color:'var(--text-secondary)'}}>
+                    No posts data available
                   </div>
                 )}
-                {historicalTab === 'performance' && !platformMetrics && (
+
+                {historicalTab === 'views' && platformMetrics && platformMetrics.views && (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={platformMetrics.months.map((month, idx) => ({
+                      month,
+                      TikTok: platformMetrics.views!.TikTok[idx],
+                      Instagram: platformMetrics.views!.Instagram[idx],
+                      Facebook: platformMetrics.views!.Facebook[idx],
+                      YouTube: platformMetrics.views!.YouTube[idx],
+                    }))}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="month" stroke="var(--text-secondary)" tick={{fontSize: 10}} />
+                      <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(v) => v >= 1000000 ? `${(v/1000000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : v} />
+                      <Tooltip contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}} formatter={(v: number) => v != null ? v.toLocaleString() : 'N/A'} />
+                      <Legend wrapperStyle={{fontSize: '11px'}} />
+                      <Bar dataKey="TikTok" fill="#FF6B6B" name="TikTok" />
+                      <Bar dataKey="Instagram" fill="#9370DB" name="Instagram" />
+                      <Bar dataKey="Facebook" fill="#4ECDC4" name="Facebook" />
+                      <Bar dataKey="YouTube" fill="#FF9F43" name="YouTube" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+                {historicalTab === 'views' && (!platformMetrics || !platformMetrics.views) && (
                   <div style={{padding:'2rem', textAlign:'center', color:'var(--text-secondary)'}}>
-                    No platform performance data available
+                    No views data available
+                  </div>
+                )}
+
+                {historicalTab === 'engagement' && platformMetrics && (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={platformMetrics.months.map((month, idx) => ({
+                      month,
+                      TikTok: platformMetrics.engagement.TikTok[idx],
+                      Instagram: platformMetrics.engagement.Instagram[idx],
+                      Facebook: platformMetrics.engagement.Facebook[idx],
+                      YouTube: platformMetrics.engagement.YouTube[idx] != null && platformMetrics.engagement.YouTube[idx]! < 5 ? platformMetrics.engagement.YouTube[idx] : null,
+                    }))}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="month" stroke="var(--text-secondary)" tick={{fontSize: 10}} />
+                      <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(v) => `${v}%`} />
+                      <Tooltip contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}} formatter={(v: number) => v != null ? `${v.toFixed(2)}%` : 'N/A'} />
+                      <Legend wrapperStyle={{fontSize: '11px'}} />
+                      <Line type="monotone" dataKey="TikTok" stroke="#FF6B6B" strokeWidth={2.5} dot={{r: 4}} name="TikTok" connectNulls />
+                      <Line type="monotone" dataKey="Instagram" stroke="#9370DB" strokeWidth={2.5} dot={{r: 4}} name="Instagram" connectNulls />
+                      <Line type="monotone" dataKey="Facebook" stroke="#4ECDC4" strokeWidth={2.5} dot={{r: 4}} name="Facebook" connectNulls />
+                      <Line type="monotone" dataKey="YouTube" stroke="#FF9F43" strokeWidth={2.5} dot={{r: 4}} name="YouTube" connectNulls />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+                {historicalTab === 'engagement' && !platformMetrics && (
+                  <div style={{padding:'2rem', textAlign:'center', color:'var(--text-secondary)'}}>
+                    No engagement data available
                   </div>
                 )}
 

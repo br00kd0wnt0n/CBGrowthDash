@@ -77,6 +77,7 @@ export interface PlatformMetricsResponse {
   months: string[];
   posts: Record<string, (number | null)[]>;
   engagement: Record<string, (number | null)[]>;
+  views?: Record<string, (number | null)[]>;
 }
 
 // GWI Research types
