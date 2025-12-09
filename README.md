@@ -65,6 +65,29 @@ Frontend will run on `http://localhost:3000` and proxy API requests to backend o
    - Backend: `PORT=8000`
    - Frontend: `VITE_API_BASE=https://your-backend.railway.app`
 
+## Environment Configuration
+
+- Backend
+  - `APP_ENV`: `production` or `development`. In `production`, debug-only endpoints are disabled.
+  - `APP_VERSION`: Optional app version override (defaults to `1.0.1`).
+  - `ALLOWED_ORIGINS`: Comma-separated list of allowed origins for CORS. Example: `https://your-frontend.up.railway.app,http://localhost:5173`.
+  - `ALLOW_ORIGIN_REGEX`: Optional regex for allowed origins (defaults to Railway `https://*.up.railway.app`).
+  - `OPENAI_API_KEY`: Enables AI endpoints with OpenAI; if unset, backend returns fallback recommendations.
+  - `DATABASE_URL`: Postgres connection string for user presets. If unset, presets routes are unavailable; use `/api/user-presets/health/db` to check status.
+  - `GIT_SHA`: Optional commit SHA to surface via `/version` (Railway also provides `RAILWAY_GIT_COMMIT_SHA`).
+
+- Frontend
+  - `VITE_API_BASE`: Base URL for API. In dev, defaults to `http://localhost:8000` if unset; in production you must set this to your backend URL.
+
+Notes
+- The backend caches historical CSVs in-memory and refreshes automatically when source files change.
+- CORS defaults allow localhost ports for dev and the Railway frontend URL. Override via env for stricter control in production.
+
+## Version Endpoint
+
+- `GET /version` returns `{ version, git_sha, app_env }` to verify live deploys.
+- Set `GIT_SHA` (or rely on `RAILWAY_GIT_COMMIT_SHA` if provided by Railway) to display the current commit.
+
 ## API Endpoints
 
 - `GET /health` - Health check

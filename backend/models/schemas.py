@@ -167,6 +167,13 @@ class AIInsightsResponse(BaseModel):
     key_insights: List[str] = Field(description="Key insights and recommendations")
 
 
+class VersionResponse(BaseModel):
+    """API version info"""
+    version: str
+    git_sha: Optional[str] = None
+    app_env: Optional[str] = None
+
+
 # AI Strategy Critique models
 class CritiqueRequest(BaseModel):
     """Request model for AI strategy critique"""

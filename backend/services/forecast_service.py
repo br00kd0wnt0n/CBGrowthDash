@@ -338,3 +338,81 @@ def load_historical_data(data_dir: Path):
         "tags": tags_df.to_dict('records'),
         "engagement_index": eng_index.to_list()
     }
+
+# Lightweight in-memory cache for historical dataframes and engagement index
+_HIST_CACHE: Dict[str, Any] = {
+    "dir": None,
+    "mtimes": {},
+    "mentions_df": None,
+    "sentiment_df": None,
+    "tags_df": None,
+    "engagement_index": None,
+}
+
+
+def _file_mtimes(data_dir: Path) -> Dict[str, float]:
+    files = {
+        "generaldynamics.csv": data_dir / "generaldynamics.csv",
+        "sentiment-dynamics.csv": data_dir / "sentiment-dynamics.csv",
+        "tags-dynamics.csv": data_dir / "tags-dynamics.csv",
+    }
+    out: Dict[str, float] = {}
+    for key, p in files.items():
+        try:
+            out[key] = p.stat().st_mtime
+        except Exception:
+            out[key] = -1.0
+    return out
+
+
+def _load_csv_df(path: Path, date_col: str = "Time") -> pd.DataFrame:
+    try:
+        df = pd.read_csv(path, encoding="utf-8-sig")
+    except Exception:
+        df = pd.read_csv(path)
+    df.columns = [c.strip().strip('\ufeff').strip('"') for c in df.columns]
+    if date_col in df.columns:
+        try:
+            df[date_col] = pd.to_datetime(df[date_col].astype(str).str.replace('"',''), errors='coerce', dayfirst=True)
+            df = df.dropna(subset=[date_col]).sort_values(by=date_col)
+        except Exception:
+            pass
+    return df.loc[:, ~df.columns.duplicated()]
+
+
+def get_historical_data_cached(data_dir: Path) -> Dict[str, Any]:
+    global _HIST_CACHE
+    mt = _file_mtimes(data_dir)
+    if _HIST_CACHE["dir"] != str(data_dir) or mt != _HIST_CACHE.get("mtimes"):
+        mentions_df = _load_csv_df(data_dir / "generaldynamics.csv")
+        sentiment_df = _load_csv_df(data_dir / "sentiment-dynamics.csv")
+        tags_df = _load_csv_df(data_dir / "tags-dynamics.csv")
+        eng_index = compute_engagement_index(mentions_df, sentiment_df)
+
+        _HIST_CACHE = {
+            "dir": str(data_dir),
+            "mtimes": mt,
+            "mentions_df": mentions_df,
+            "sentiment_df": sentiment_df,
+            "tags_df": tags_df,
+            "engagement_index": eng_index,
+        }
+
+    mentions_df = _HIST_CACHE["mentions_df"].copy()
+    sentiment_df = _HIST_CACHE["sentiment_df"].copy()
+    tags_df = _HIST_CACHE["tags_df"].copy()
+    for df in (mentions_df, sentiment_df, tags_df):
+        if 'Time' in df.columns:
+            df['Time'] = df['Time'].astype(str)
+
+    return {
+        "mentions": mentions_df.to_dict('records'),
+        "sentiment": sentiment_df.to_dict('records'),
+        "tags": tags_df.to_dict('records'),
+        "engagement_index": list(_HIST_CACHE["engagement_index"].values),
+    }
+
+
+def get_engagement_index_cached(data_dir: Path) -> pd.Series:
+    _ = get_historical_data_cached(data_dir)
+    return _HIST_CACHE["engagement_index"]

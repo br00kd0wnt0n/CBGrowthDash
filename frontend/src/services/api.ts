@@ -1,5 +1,8 @@
 // API Service
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://cbgrowthdash-production.up.railway.app';
+const isDev = import.meta.env.DEV;
+const DEFAULT_PROD_API = 'https://cbgrowthdash-production.up.railway.app';
+const API_BASE: string = (import.meta.env.VITE_API_BASE as string | undefined)
+  || (isDev ? 'http://localhost:8000' : DEFAULT_PROD_API);
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path}`;

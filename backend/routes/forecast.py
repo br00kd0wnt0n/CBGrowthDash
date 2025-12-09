@@ -12,6 +12,8 @@ from services.forecast_service import (
     forecast_growth,
     load_historical_data,
     compute_engagement_index,
+    get_historical_data_cached,
+    get_engagement_index_cached,
     PRESETS,
     PLATFORMS,
     CONTENT_MULT,
@@ -35,7 +37,8 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 async def get_historical_data():
     """Get historical mentions, sentiment, and tags data"""
     try:
-        data = load_historical_data(DATA_DIR)
+        # Use cached loader for throughput
+        data = get_historical_data_cached(DATA_DIR)
         return HistoricalDataResponse(**data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -200,16 +203,8 @@ async def run_forecast(request: ForecastRequest):
 
         preset_cfg = PRESETS[request.preset]
 
-        # Load engagement index from historical data
-        mentions_df = pd.read_csv(DATA_DIR / "generaldynamics.csv")
-        sentiment_df = pd.read_csv(DATA_DIR / "sentiment-dynamics.csv")
-
-        # Clean column names
-        for df in [mentions_df, sentiment_df]:
-            df.columns = [c.strip().strip('\ufeff').strip('"') for c in df.columns]
-
-        # Compute engagement index
-        eng_index = compute_engagement_index(mentions_df, sentiment_df)
+        # Load engagement index from cached historical data
+        eng_index = get_engagement_index_cached(DATA_DIR)
 
         # Optional: sheet-driven calibration
         base_monthly_rate = None

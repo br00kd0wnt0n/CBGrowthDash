@@ -562,11 +562,7 @@ export function Dashboard() {
   const [tuneLoading, setTuneLoading] = useState(false)
   const [tuneSuggestions, setTuneSuggestions] = useState<{key:string; current:number; suggested:number; reason:string; confidence:string; accept?:boolean}[]>([])
 
-  const toggleScenario = (index: number) => {
-    setScenarios(prev => prev.map((s, i) =>
-      i === index ? { ...s, visible: !s.visible } : s
-    ))
-  }
+  // Scenario toggling is handled via scenario visibility state elsewhere; remove unused helper.
 
   const toggleSidebarSection = (key: string) => {
     const willExpand = sidebarCollapsed[key as keyof typeof sidebarCollapsed]
