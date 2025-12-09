@@ -1945,7 +1945,7 @@ export function Dashboard() {
                 {critiqueLoading ? 'Analyzing...' : strategyCritique ? 'Re-Analyze Strategy' : 'Analyze My Strategy'}
               </button>
               <button
-                className="ai-button"
+                className="ai-button critique-trigger-btn"
                 style={{ marginLeft: '8px' }}
                 onClick={prepareApplyOptimizations}
                 disabled={!strategyCritique}
