@@ -79,7 +79,21 @@ export function Dashboard() {
   const [aiInsights, setAiInsights] = useState<AIInsightsResponse | null>(null)
   const [scenarios, setScenarios] = useState<ScenarioWithForecast[]>([])
   const [expandedContentMix, setExpandedContentMix] = useState<string | null>(null)
-  const [historicalTab, setHistoricalTab] = useState<'mentions' | 'sentiment' | 'tags' | 'performance'>('mentions')
+  const [historicalTab, setHistoricalTab] = useState<'mentions' | 'sentiment' | 'tags' | 'performance' | 'topPosts'>('mentions')
+
+  // Top Posts data - flags for highest peaks in historical data
+  const [topPosts] = useState<Array<{
+    rank: number;
+    date: string;
+    title: string;
+    platform: string;
+    metric: string;
+    description: string;
+  }>>([
+    { rank: 1, date: 'July 7, 2025', title: 'Bedtime Bear', platform: 'TikTok', metric: '4.7M views · 901.9K likes · 93.8K shares', description: 'Viral TikTok moment driving massive engagement' },
+    { rank: 2, date: 'August 1, 2025', title: 'Bedtime Bear Fan Engagement', platform: 'Facebook', metric: '1.4M views · 43.2K likes · 379 comments', description: 'Strong cross-platform fan engagement' },
+    { rank: 3, date: 'September 1, 2025', title: 'Bedtime Bear Fan Engagement', platform: 'Facebook', metric: '54.7K likes · 27K shares · 997 comments', description: 'High share rate indicating strong brand advocacy' },
+  ])
   // Confidence band totals (per month)
   const [bandHigh, setBandHigh] = useState<number[] | null>(null) // optimistic (CPF min)
   const [bandLow, setBandLow] = useState<number[] | null>(null)   // pessimistic (CPF max)
@@ -1202,6 +1216,12 @@ export function Dashboard() {
                   Tags
                 </button>
                 <button
+                  className={`historical-tab ${historicalTab === 'topPosts' ? 'active' : ''}`}
+                  onClick={() => setHistoricalTab('topPosts')}
+                >
+                  Top Posts
+                </button>
+                <button
                   className={`historical-tab ${historicalTab === 'performance' ? 'active' : ''}`}
                   onClick={() => setHistoricalTab('performance')}
                 >
@@ -1214,13 +1234,19 @@ export function Dashboard() {
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={historicalData.mentions}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                      <XAxis dataKey="Time" stroke="var(--text-secondary)" />
-                      <YAxis stroke="var(--text-secondary)" />
+                      <XAxis dataKey="Time" stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(v) => v ? v.slice(5, 10) : ''} />
+                      <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(v) => v >= 1000000 ? `${(v/1000000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : v} width={50} />
                       <Tooltip
                         contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
+                        formatter={(value: number) => [value.toLocaleString(), 'Mentions']}
+                        labelFormatter={(label) => label ? label.slice(0, 10) : ''}
                       />
                       <Legend />
                       <Line type="monotone" dataKey="Mentions" stroke={SERIES_COLORS.mentions} strokeWidth={2.5} />
+                      {/* Top Posts markers */}
+                      <ReferenceLine x="2025-07-07 01:00:00" stroke="#FFD700" strokeWidth={2} strokeDasharray="4 4" label={{ value: '#1', position: 'top', fill: '#FFD700', fontSize: 11, fontWeight: 700 }} />
+                      <ReferenceLine x="2025-07-28 01:00:00" stroke="#C0C0C0" strokeWidth={2} strokeDasharray="4 4" label={{ value: '#2', position: 'top', fill: '#C0C0C0', fontSize: 11, fontWeight: 700 }} />
+                      <ReferenceLine x="2025-09-01 01:00:00" stroke="#CD7F32" strokeWidth={2} strokeDasharray="4 4" label={{ value: '#3', position: 'top', fill: '#CD7F32', fontSize: 11, fontWeight: 700 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -1229,10 +1255,12 @@ export function Dashboard() {
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={historicalData.sentiment}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                      <XAxis dataKey="Time" stroke="var(--text-secondary)" />
-                      <YAxis stroke="var(--text-secondary)" />
+                      <XAxis dataKey="Time" stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(v) => v ? v.slice(5, 10) : ''} />
+                      <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(v) => v >= 1000000 ? `${(v/1000000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : v} width={50} />
                       <Tooltip
                         contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
+                        formatter={(value: number, name: string) => [value.toLocaleString(), name]}
+                        labelFormatter={(label) => label ? label.slice(0, 10) : ''}
                       />
                       <Legend />
                       <Line type="monotone" dataKey="Positive" stroke={SERIES_COLORS.sentimentPos} strokeWidth={2.5} />
@@ -1246,10 +1274,12 @@ export function Dashboard() {
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={historicalData.tags}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                      <XAxis dataKey="Time" stroke="var(--text-secondary)" />
-                      <YAxis stroke="var(--text-secondary)" />
+                      <XAxis dataKey="Time" stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(v) => v ? v.slice(5, 10) : ''} />
+                      <YAxis stroke="var(--text-secondary)" tick={{fontSize: 10}} tickFormatter={(v) => v >= 1000000 ? `${(v/1000000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : v} width={50} />
                       <Tooltip
                         contentStyle={{background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px'}}
+                        formatter={(value: number, name: string) => [value.toLocaleString(), name]}
+                        labelFormatter={(label) => label ? label.slice(0, 10) : ''}
                       />
                       <Legend />
                       <Line type="monotone" dataKey="Official Care Bears" stroke={SERIES_COLORS.tag1} strokeWidth={2.5} name="Official Care Bears" />
@@ -1312,6 +1342,25 @@ export function Dashboard() {
                 {historicalTab === 'performance' && !platformMetrics && (
                   <div style={{padding:'2rem', textAlign:'center', color:'var(--text-secondary)'}}>
                     No platform performance data available
+                  </div>
+                )}
+
+                {historicalTab === 'topPosts' && (
+                  <div className="top-posts-container" style={{height: '300px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.75rem', padding: '1rem 0'}}>
+                    {topPosts.map((post, idx) => (
+                      <div key={idx} className={`top-post-flag rank-${post.rank}`} style={{display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem 1rem'}}>
+                        <div className="post-rank-badge" style={{width: '36px', height: '36px', fontSize: '0.85rem', flexShrink: 0}}>#{post.rank}</div>
+                        <div style={{flex: '0 0 180px', fontWeight: 700, fontSize: '0.95rem'}}>{post.title}</div>
+                        {post.platform && (
+                          <span className={`platform-badge ${post.platform.toLowerCase()}`} style={{flexShrink: 0}}>{post.platform}</span>
+                        )}
+                        {post.date && <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)', flexShrink: 0}}>{post.date}</div>}
+                        {post.metric && (
+                          <div className="post-metric" style={{fontSize: '0.8rem', flex: 1}}>{post.metric}</div>
+                        )}
+                        <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)', flex: '0 0 200px', textAlign: 'right'}}>{post.description}</div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

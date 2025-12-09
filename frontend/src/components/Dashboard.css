@@ -1539,3 +1539,140 @@
   color: white;
   border-color: var(--fountain-blue);
 }
+
+/* Top Posts Tab Styles */
+.top-posts-container {
+  padding: 1rem;
+}
+
+.top-posts-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.top-posts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.top-post-flag {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border-left: 4px solid var(--fountain-blue);
+  transition: all 0.2s ease;
+}
+
+.top-post-flag:hover {
+  transform: translateX(4px);
+  box-shadow: var(--shadow-sm);
+}
+
+.top-post-flag.rank-1 {
+  border-left-color: #FFD700;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.08), var(--bg-secondary));
+}
+
+.top-post-flag.rank-2 {
+  border-left-color: #C0C0C0;
+  background: linear-gradient(135deg, rgba(192, 192, 192, 0.08), var(--bg-secondary));
+}
+
+.top-post-flag.rank-3 {
+  border-left-color: #CD7F32;
+  background: linear-gradient(135deg, rgba(205, 127, 50, 0.08), var(--bg-secondary));
+}
+
+.post-rank-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.rank-1 .post-rank-badge {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #1a1a1a;
+}
+
+.rank-2 .post-rank-badge {
+  background: linear-gradient(135deg, #C0C0C0, #A9A9A9);
+  color: #1a1a1a;
+}
+
+.rank-3 .post-rank-badge {
+  background: linear-gradient(135deg, #CD7F32, #B87333);
+  color: white;
+}
+
+.post-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.post-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.post-date {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.post-platform .platform-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.platform-badge.tiktok {
+  background: rgba(255, 107, 107, 0.15);
+  color: #FF6B6B;
+}
+
+.platform-badge.instagram {
+  background: rgba(147, 112, 219, 0.15);
+  color: #9370DB;
+}
+
+.platform-badge.facebook {
+  background: rgba(78, 205, 196, 0.15);
+  color: #4ECDC4;
+}
+
+.platform-badge.youtube {
+  background: rgba(255, 99, 71, 0.15);
+  color: #FF6347;
+}
+
+.post-metric {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--fountain-blue);
+}
+
+.post-description {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
