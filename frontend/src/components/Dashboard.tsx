@@ -564,6 +564,97 @@ export function Dashboard() {
 
   // Scenario toggling is handled via scenario visibility state elsewhere; remove unused helper.
 
+  // --- Apply Optimizations from AI Critique ---
+  const [showApplyConfirm, setShowApplyConfirm] = useState(false)
+  const [applyPreview, setApplyPreview] = useState<{
+    postsPerWeek?: { from: number; to: number };
+    platformAllocation?: { from: Record<string, number>; to: Record<string, number> };
+  } | null>(null)
+
+  const parsePostsPerWeek = (text: string | null | undefined): number | null => {
+    if (!text) return null
+    const m = text.match(/(\d+)\s*posts?\s*\/\s*week/i) || text.match(/(\d+)\s*posts?\s*per\s*week/i) || text.match(/^(\d{1,3})$/)
+    return m ? Math.max(1, Math.min(100, parseInt(m[1], 10))) : null
+  }
+
+  const normalizeAllocation = (alloc: Record<string, number>): Record<string, number> => {
+    const keys = Object.keys(alloc)
+    const sum = keys.reduce((s, k) => s + Math.max(0, alloc[k]), 0) || 1
+    // scale to 100 and round, then fix rounding residue
+    const scaled: Record<string, number> = {}
+    let running = 0
+    keys.forEach((k, i) => {
+      if (i === keys.length - 1) {
+        scaled[k] = Math.max(0, Math.min(100, 100 - running))
+      } else {
+        const v = Math.round((alloc[k] / sum) * 100)
+        scaled[k] = Math.max(0, Math.min(100, v))
+        running += scaled[k]
+      }
+    })
+    return scaled
+  }
+
+  const parsePlatformAllocation = (text: string | null | undefined): Record<string, number> | null => {
+    if (!text) return null
+    const out: Record<string, number> = {}
+    const re = /([A-Za-z ]+)\s*(\d{1,3})%/g
+    let m: RegExpExecArray | null
+    while ((m = re.exec(text)) !== null) {
+      const label = m[1].trim()
+      const val = Math.max(0, Math.min(100, parseInt(m[2], 10)))
+      // Map common platform labels to canonical keys
+      const map: Record<string, string> = {
+        Instagram: 'Instagram', IG: 'Instagram',
+        TikTok: 'TikTok', TT: 'TikTok',
+        YouTube: 'YouTube', YT: 'YouTube',
+        Facebook: 'Facebook', FB: 'Facebook'
+      }
+      const key = map[label as keyof typeof map] || label
+      if (['Instagram','TikTok','YouTube','Facebook'].includes(key)) out[key] = val
+    }
+    if (Object.keys(out).length === 0) return null
+    // ensure all platforms present by carrying over previous values when missing
+    const filled = { ...platformAllocation, ...out }
+    return normalizeAllocation(filled)
+  }
+
+  const prepareApplyOptimizations = () => {
+    if (!strategyCritique) return
+    const changes: typeof applyPreview = {}
+    // Find posting frequency and platform allocation suggestions
+    for (const cat of strategyCritique.category_assessments) {
+      const name = cat.category.toLowerCase()
+      if (!cat.suggested_value) continue
+      if (name.includes('posting') || name.includes('frequency')) {
+        const p = parsePostsPerWeek(cat.suggested_value)
+        if (p !== null && p !== postsPerWeek) changes.postsPerWeek = { from: postsPerWeek, to: p }
+      }
+      if (name.includes('platform') && name.includes('allocation')) {
+        const alloc = parsePlatformAllocation(cat.suggested_value)
+        if (alloc) {
+          // compare if different
+          const isDifferent = Object.keys(alloc).some(k => (alloc[k] || 0) !== (platformAllocation[k as keyof typeof platformAllocation] || 0))
+          if (isDifferent) changes.platformAllocation = { from: platformAllocation, to: alloc }
+      }
+      }
+    }
+    if (!changes.postsPerWeek && !changes.platformAllocation) {
+      // Nothing to apply
+      return
+    }
+    setApplyPreview(changes)
+    setShowApplyConfirm(true)
+  }
+
+  const confirmApplyOptimizations = () => {
+    if (!applyPreview) return
+    if (applyPreview.postsPerWeek) setPostsPerWeek(applyPreview.postsPerWeek.to)
+    if (applyPreview.platformAllocation) setPlatformAllocation(applyPreview.platformAllocation.to as any)
+    setShowApplyConfirm(false)
+    setApplyPreview(null)
+  }
+
   const toggleSidebarSection = (key: string) => {
     const willExpand = sidebarCollapsed[key as keyof typeof sidebarCollapsed]
     setSidebarCollapsed(prev => ({ ...prev, [key]: !prev[key] }))
@@ -612,13 +703,46 @@ export function Dashboard() {
   }
 
   const updateContentMix = (platform: string, contentType: string, value: number) => {
-    setContentMix(prev => ({
-      ...prev,
-      [platform]: {
-        ...prev[platform as keyof typeof prev],
-        [contentType]: value
+    setContentMix(prev => {
+      const current = prev[platform as keyof typeof prev] as Record<string, number>
+      const keys = Object.keys(current)
+      const others = keys.filter(k => k !== contentType)
+      const remaining = Math.max(0, 100 - Math.max(0, Math.min(100, value)))
+      const sumOthers = others.reduce((s, k) => s + Math.max(0, current[k] || 0), 0)
+
+      const next: Record<string, number> = {}
+      next[contentType] = Math.max(0, Math.min(100, value))
+
+      if (others.length === 0) {
+        // Single key safety (shouldn't happen)
+        return { ...prev, [platform]: next as any }
       }
-    }))
+
+      if (sumOthers > 0) {
+        // Distribute remaining proportionally to previous other values
+        let run = 0
+        others.forEach((k, i) => {
+          if (i === others.length - 1) {
+            next[k] = Math.max(0, Math.min(100, remaining - run))
+          } else {
+            const share = Math.round((Math.max(0, current[k]) / sumOthers) * remaining)
+            next[k] = Math.max(0, Math.min(100, share))
+            run += next[k]
+          }
+        })
+      } else {
+        // Distribute equally when others were zeroed
+        const per = Math.floor(remaining / others.length)
+        others.forEach((k, i) => {
+          next[k] = (i === others.length - 1) ? Math.max(0, remaining - per * (others.length - 1)) : per
+        })
+      }
+
+      return {
+        ...prev,
+        [platform]: next as any,
+      }
+    })
   }
 
   const updateFollowerCount = (platform: string, value: string) => {
@@ -697,6 +821,44 @@ export function Dashboard() {
 
   return (
     <div className="unified-dashboard">
+      {showApplyConfirm && applyPreview && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal" style={{maxWidth:'620px'}}>
+            <div className="modal-header">
+              <h2>Apply AI Optimizations</h2>
+              <button className="modal-close" aria-label="Close" onClick={()=>{setShowApplyConfirm(false); setApplyPreview(null)}}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{marginTop:0, color:'var(--text-secondary)'}}>Review the changes suggested by the AI assessment before applying.</p>
+              <div style={{display:'grid', gap:'10px'}}>
+                {applyPreview.postsPerWeek && (
+                  <div className="diff-row">
+                    <strong>Posts per Week:</strong>
+                    <span style={{marginLeft: '6px'}}>{applyPreview.postsPerWeek.from} → {applyPreview.postsPerWeek.to}</span>
+                  </div>
+                )}
+                {applyPreview.platformAllocation && (
+                  <div className="diff-row">
+                    <strong>Platform Allocation:</strong>
+                    <div style={{marginTop:'6px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px'}}>
+                      {Object.keys(applyPreview.platformAllocation.to).map(k => (
+                        <div key={k} className="diff-cell">
+                          <span style={{display:'inline-block', width:'80px'}}>{k}:</span>
+                          <span>{applyPreview.platformAllocation!.from[k as keyof typeof platformAllocation] ?? 0}% → {applyPreview.platformAllocation!.to[k]}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer" style={{display:'flex', gap:'10px', justifyContent:'flex-end'}}>
+              <button className="modal-close" onClick={()=>{setShowApplyConfirm(false); setApplyPreview(null)}}>Cancel</button>
+              <button className="ai-button" onClick={confirmApplyOptimizations}>Apply</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* KPI Progress Bar */}
       <div className="kpi-bar">
         <div className="kpi-section">
@@ -1781,6 +1943,15 @@ export function Dashboard() {
                 disabled={critiqueLoading}
               >
                 {critiqueLoading ? 'Analyzing...' : strategyCritique ? 'Re-Analyze Strategy' : 'Analyze My Strategy'}
+              </button>
+              <button
+                className="ai-button"
+                style={{ marginLeft: '8px' }}
+                onClick={prepareApplyOptimizations}
+                disabled={!strategyCritique}
+                title="Apply suggested posts/week and platform allocation from AI assessment"
+              >
+                Apply Optimizations
               </button>
             </div>
 
