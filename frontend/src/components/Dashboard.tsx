@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { LineChart, ComposedChart, BarChart, Bar, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, LabelList } from 'recharts'
-import { api, type HistoricalDataResponse, type ForecastRequest, type ForecastResponse, type AIInsightsResponse, type AIScenario, type PlatformMetricsResponse, type AudiencePreset, type AllocationRecommendation, type UserPresetResponse, type UserPresetConfig } from '../services/api'
+import { api, type HistoricalDataResponse, type ForecastRequest, type ForecastResponse, type AIInsightsResponse, type AIScenario, type PlatformMetricsResponse, type AudiencePreset, type AllocationRecommendation, type UserPresetResponse, type UserPresetConfig, type CritiqueResponse } from '../services/api'
 import './Dashboard.css'
 
 // Number formatting utility (currently unused but available for future use)
@@ -78,6 +78,10 @@ export function Dashboard() {
   // AI Insights state
   const [aiInsights, setAiInsights] = useState<AIInsightsResponse | null>(null)
   const [scenarios, setScenarios] = useState<ScenarioWithForecast[]>([])
+  // AI Strategy Critique state
+  const [strategyCritique, setStrategyCritique] = useState<CritiqueResponse | null>(null)
+  const [critiqueLoading, setCritiqueLoading] = useState(false)
+  const [critiqueError, setCritiqueError] = useState<string | null>(null)
   const [expandedContentMix, setExpandedContentMix] = useState<string | null>(null)
   const [historicalTab, setHistoricalTab] = useState<'posts' | 'views' | 'engagement'>('posts')
 
@@ -517,6 +521,35 @@ export function Dashboard() {
       console.error('Failed to get AI recommendations:', err)
     } finally {
       setAiLoading(false)
+    }
+  }
+
+  // Get AI Strategy Critique (manually triggered)
+  const getStrategyCritique = async () => {
+    setCritiqueLoading(true)
+    setCritiqueError(null)
+    try {
+      const critique = await api.getStrategyCritique({
+        current_followers: currentFollowers,
+        posts_per_week: postsPerWeek,
+        platform_allocation: platformAllocation,
+        content_mix: contentMix,
+        months,
+        preset,
+        audience_mix: audienceMix,
+        projected_total: projectedTotal,
+        goal: goalFollowers,
+        paid_budget_week: enableBudget ? paidBudgetWeek : 0,
+        creator_budget_week: enableBudget ? creatorBudgetWeek : 0,
+        acquisition_budget_week: enableBudget ? acquisitionBudgetWeek : 0,
+        cpf_range: { min: cpfMin, mid: cpfMid, max: cpfMax },
+      })
+      setStrategyCritique(critique)
+    } catch (err) {
+      console.error('Failed to get strategy critique:', err)
+      setCritiqueError(err instanceof Error ? err.message : 'Failed to analyze strategy')
+    } finally {
+      setCritiqueLoading(false)
     }
   }
 
@@ -1818,70 +1851,110 @@ export function Dashboard() {
             )
           })()}
 
-          {scenarios.length > 0 && (
-            <div className="scenarios-comparison">
-              <h3 className="section-header">AI Scenario Comparison</h3>
-              <div className="scenarios-grid">
-                {[...scenarios].sort((a, b) => {
-                  const order: {[key: string]: number} = { 'Conservative': 0, 'Optimized': 1, 'Aggressive': 2 }
-                  return (order[a.name] ?? 99) - (order[b.name] ?? 99)
-                }).map((scenario, idx) => (
-                  <div key={idx} className="scenario-card" style={{borderColor: scenario.color}}>
-                    <div className="scenario-header">
-                      <h4 style={{color: scenario.color}}>{scenario.name}</h4>
-                      <span className={`risk-badge risk-${scenario.risk_level.toLowerCase()}`}>
-                        {scenario.risk_level} RISK
-                      </span>
-                    </div>
-                    <div className="scenario-stats">
-                      <div className="stat">
-                        <span className="stat-label">Posts/Week</span>
-                        <span className="stat-value">{scenario.posts_per_week}</span>
-                      </div>
-                      <div className="stat">
-                        <span className="stat-label">Projected</span>
-                        <span className="stat-value">
-                          {scenario.forecast
-                            ? `${Math.round(scenario.forecast.progress_to_goal)}% of goal`
-                            : 'Calculating...'}
-                        </span>
-                      </div>
-                      <div className="stat">
-                        <span className="stat-label">Total</span>
-                        <span className="stat-value">
-                          {scenario.forecast
-                            ? `${(scenario.forecast.projected_total / 1000000).toFixed(2)}M`
-                            : '—'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="scenario-reasoning">{scenario.reasoning}</div>
-                    <div className="scenario-allocation">
-                      {Object.entries(scenario.platform_allocation).map(([platform, percent]) => (
-                        <div key={platform} className="allocation-bar">
-                          <span className="allocation-label">{platform}</span>
-                          <div className="allocation-bar-bg">
-                            <div className="allocation-bar-fill" style={{width: `${percent}%`, background: scenario.color}}></div>
-                          </div>
-                          <span className="allocation-percent">{percent}%</span>
-                        </div>
-                      ))}
-                    </div>
-                    <button
-                      className="scenario-apply-btn"
-                      onClick={() => {
-                        setPostsPerWeek(scenario.posts_per_week)
-                        setPlatformAllocation(scenario.platform_allocation as any)
-                        setPresetModified(true)
-                      }}
-                    >
-                      Apply This Scenario
-                    </button>
-                  </div>
-                ))}
-              </div>
+          {/* AI Strategy Critique Module */}
+          <div className="strategy-critique-module">
+            <div className="critique-header">
+              <h3 className="section-header">AI Strategy Assessment</h3>
+              <button
+                className="ai-button critique-trigger-btn"
+                onClick={getStrategyCritique}
+                disabled={critiqueLoading}
+              >
+                {critiqueLoading ? 'Analyzing...' : strategyCritique ? 'Re-Analyze Strategy' : 'Analyze My Strategy'}
+              </button>
             </div>
-          )}
+
+            {critiqueError && (
+              <div className="critique-error">
+                {critiqueError}
+              </div>
+            )}
+
+            {critiqueLoading && (
+              <div className="critique-loading">
+                <div className="loading-spinner"></div>
+                <p>Analyzing your strategy against GWI research and best practices...</p>
+              </div>
+            )}
+
+            {strategyCritique && !critiqueLoading && (
+              <div className="critique-results">
+                {/* Overall Assessment */}
+                <div className={`overall-assessment rating-${strategyCritique.overall_assessment.rating.toLowerCase().replace('_', '-')}`}>
+                  <div className="assessment-badge">
+                    {strategyCritique.overall_assessment.rating.replace('_', ' ')}
+                  </div>
+                  <p className="assessment-summary">{strategyCritique.overall_assessment.summary}</p>
+                </div>
+
+                {/* Category Assessments */}
+                <div className="category-assessments">
+                  <h4>Category Breakdown</h4>
+                  {strategyCritique.category_assessments.map((cat, idx) => (
+                    <div key={idx} className={`category-card rating-${cat.rating.toLowerCase().replace('_', '-')}`}>
+                      <div className="category-header">
+                        <span className="category-name">{cat.category}</span>
+                        <span className={`category-rating rating-badge-${cat.rating.toLowerCase().replace('_', '-')}`}>
+                          {cat.rating.replace('_', ' ')}
+                        </span>
+                      </div>
+                      <div className="category-current">
+                        <strong>Current:</strong> {cat.current_value}
+                      </div>
+                      <p className="category-assessment">{cat.assessment}</p>
+                      {cat.suggestion && (
+                        <div className="category-suggestion">
+                          <strong>Suggestion:</strong> {cat.suggestion}
+                          {cat.suggested_value && (
+                            <span className="suggested-value"> ({cat.suggested_value})</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Top Optimizations */}
+                <div className="top-optimizations">
+                  <h4>Priority Optimizations</h4>
+                  {strategyCritique.top_optimizations.map((opt, idx) => (
+                    <div key={idx} className="optimization-card">
+                      <div className="optimization-header">
+                        <span className="optimization-priority">#{opt.priority}</span>
+                        <span className={`optimization-effort effort-${opt.effort.toLowerCase()}`}>
+                          {opt.effort} Effort
+                        </span>
+                      </div>
+                      <p className="optimization-action">{opt.action}</p>
+                      <p className="optimization-impact"><strong>Impact:</strong> {opt.impact}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* GWI Alignment Notes */}
+                {strategyCritique.gwi_alignment_notes.length > 0 && (
+                  <div className="gwi-notes">
+                    <h4>GWI Research Alignment</h4>
+                    <ul>
+                      {strategyCritique.gwi_alignment_notes.map((note, idx) => (
+                        <li key={idx}>{note}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!strategyCritique && !critiqueLoading && !critiqueError && (
+              <div className="critique-placeholder">
+                <p>Click "Analyze My Strategy" to get AI-powered insights on your current configuration.</p>
+                <p className="placeholder-details">
+                  The AI will assess your posts/week, platform allocation, content mix, audience targeting,
+                  and goal feasibility against GWI research data and best practices.
+                </p>
+              </div>
+            )}
+          </div>
 
 
           {/* Parameter Tuning Modal */}

@@ -165,3 +165,54 @@ class AIInsightsResponse(BaseModel):
     analysis: str = Field(description="Overall assessment of current strategy")
     scenarios: List[AIScenario] = Field(description="3 alternative scenarios")
     key_insights: List[str] = Field(description="Key insights and recommendations")
+
+
+# AI Strategy Critique models
+class CritiqueRequest(BaseModel):
+    """Request model for AI strategy critique"""
+    current_followers: Dict[str, int] = Field(description="Current follower counts per platform")
+    posts_per_week: int = Field(ge=1, le=100, description="Total posts per week")
+    platform_allocation: Dict[str, int] = Field(description="Platform allocation percentages")
+    content_mix: Dict[str, Dict[str, int]] = Field(description="Content mix by platform")
+    months: int = Field(ge=3, le=24, description="Forecast period in months")
+    preset: str = Field(description="Strategy preset name")
+    audience_mix: Dict[str, int] = Field(description="Audience segment mix percentages")
+    projected_total: int = Field(description="Projected total followers")
+    goal: int = Field(description="Goal follower count")
+    # Optional fields
+    paid_budget_week: Optional[float] = Field(default=0, description="Weekly paid budget")
+    creator_budget_week: Optional[float] = Field(default=0, description="Weekly creator budget")
+    acquisition_budget_week: Optional[float] = Field(default=0, description="Weekly acquisition budget")
+    cpf_range: Optional[Dict[str, float]] = Field(default=None, description="CPF range {min, mid, max}")
+
+
+class CategoryAssessment(BaseModel):
+    """Individual category assessment"""
+    category: str
+    rating: str
+    current_value: str
+    assessment: str
+    suggestion: Optional[str] = None
+    suggested_value: Optional[str] = None
+
+
+class Optimization(BaseModel):
+    """Optimization suggestion"""
+    priority: int
+    action: str
+    impact: str
+    effort: str
+
+
+class OverallAssessment(BaseModel):
+    """Overall strategy assessment"""
+    rating: str
+    summary: str
+
+
+class CritiqueResponse(BaseModel):
+    """Response model for AI strategy critique"""
+    overall_assessment: OverallAssessment
+    category_assessments: List[CategoryAssessment]
+    top_optimizations: List[Optimization]
+    gwi_alignment_notes: List[str]

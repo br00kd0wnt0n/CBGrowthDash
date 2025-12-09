@@ -357,6 +357,373 @@ def tune_parameters(req: ParamTuneRequest) -> Dict[str, Any]:
     return {"suggestions": suggestions}
 
 
+def critique_strategy(
+    current_followers: Dict[str, int],
+    posts_per_week: int,
+    platform_allocation: Dict[str, int],
+    content_mix: Dict[str, Dict[str, int]],
+    months: int,
+    preset: str,
+    audience_mix: Dict[str, int],
+    projected_total: int,
+    goal: int,
+    historical_data: Dict[str, Any],
+    budget_info: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    Provide a balanced critique and optimization suggestions for the user's current strategy.
+    Assesses all variables against GWI research, historical data, and client targets.
+    """
+
+    total_followers = sum(current_followers.values())
+    progress_to_goal = (projected_total / goal * 100) if goal > 0 else 0
+
+    # Budget info defaults
+    if budget_info is None:
+        budget_info = {
+            "total_annual_budget": 100000,
+            "paid_media_weekly": 641,
+            "cpf_range": {"min": 0.10, "mid": 0.15, "max": 0.20}
+        }
+
+    # Build comprehensive context for AI critique
+    context = f"""
+You are an expert social media growth strategist providing a balanced critique of a Care Bears growth campaign.
+Use the GWI 2024 research data to assess the strategy against audience segment behaviors.
+
+{GWI_RESEARCH_CONTEXT}
+
+CLIENT OBJECTIVE: Grow from {total_followers:,} to {goal:,} followers (2x growth) within 12 months.
+
+CURRENT STRATEGY CONFIGURATION:
+- Strategy Preset: {preset}
+- Forecast Period: {months} months
+- Posts per Week: {posts_per_week}
+- Projected Total: {projected_total:,} ({progress_to_goal:.1f}% of goal)
+
+PLATFORM FOLLOWER DISTRIBUTION:
+"""
+    for platform, count in current_followers.items():
+        pct = (count / total_followers * 100) if total_followers > 0 else 0
+        context += f"- {platform}: {count:,} ({pct:.1f}%)\n"
+
+    context += f"""
+CONTENT POSTING ALLOCATION:
+"""
+    for platform, pct in platform_allocation.items():
+        posts = int((posts_per_week * pct) / 100)
+        context += f"- {platform}: {pct}% ({posts} posts/week)\n"
+
+    context += f"""
+CONTENT MIX BY PLATFORM:
+"""
+    for platform, mix in content_mix.items():
+        context += f"- {platform}: {mix}\n"
+
+    context += f"""
+TARGET AUDIENCE MIX:
+- Parents: {audience_mix.get('parents', 0)}%
+- Gifters: {audience_mix.get('gifters', 0)}%
+- Collectors: {audience_mix.get('collectors', 0)}%
+
+BUDGET INFORMATION:
+- Paid Media Weekly: ${budget_info.get('paid_media_weekly', 0):,}
+- CPF Range: ${budget_info.get('cpf_range', {}).get('min', 0.10)}-${budget_info.get('cpf_range', {}).get('max', 0.20)}
+"""
+
+    prompt = context + """
+TASK:
+Provide a balanced, expert critique of this strategy. Be specific and actionable.
+
+Assess these areas:
+1. POSTING FREQUENCY: Is the posts/week optimal? Consider engagement quality vs. reach.
+2. PLATFORM ALLOCATION: Does allocation match the target audience mix and GWI platform indices?
+3. CONTENT MIX: Are content formats optimized for each platform's strengths?
+4. AUDIENCE ALIGNMENT: Does the strategy effectively reach parents (1.30x TikTok), gifters (1.14x Facebook), and collectors?
+5. GOAL FEASIBILITY: Can this configuration realistically achieve the 2x growth goal?
+
+Return ONLY valid JSON in this exact format:
+{
+    "overall_assessment": {
+        "rating": "STRONG" | "GOOD" | "NEEDS_WORK" | "AT_RISK",
+        "summary": "2-3 sentence executive summary of the strategy's strengths and weaknesses"
+    },
+    "category_assessments": [
+        {
+            "category": "Posting Frequency",
+            "rating": "OPTIMAL" | "ACCEPTABLE" | "NEEDS_ADJUSTMENT",
+            "current_value": "40 posts/week",
+            "assessment": "Specific critique of current value",
+            "suggestion": "Specific optimization suggestion if needed, or null if optimal",
+            "suggested_value": "28 posts/week" or null
+        },
+        {
+            "category": "Platform Allocation",
+            "rating": "...",
+            "current_value": "TikTok 35%, Instagram 35%...",
+            "assessment": "...",
+            "suggestion": "...",
+            "suggested_value": "TikTok 30%, Instagram 30%..." or null
+        },
+        {
+            "category": "Content Mix",
+            "rating": "...",
+            "current_value": "Short Video dominant...",
+            "assessment": "...",
+            "suggestion": "...",
+            "suggested_value": null
+        },
+        {
+            "category": "Audience Alignment",
+            "rating": "...",
+            "current_value": "Parents 80%, Gifters 10%...",
+            "assessment": "...",
+            "suggestion": "...",
+            "suggested_value": null
+        },
+        {
+            "category": "Goal Feasibility",
+            "rating": "ON_TRACK" | "ACHIEVABLE" | "STRETCH" | "UNLIKELY",
+            "current_value": "85% of goal projected",
+            "assessment": "...",
+            "suggestion": "...",
+            "suggested_value": null
+        }
+    ],
+    "top_optimizations": [
+        {
+            "priority": 1,
+            "action": "Specific, actionable optimization",
+            "impact": "Expected impact on goal achievement",
+            "effort": "LOW" | "MEDIUM" | "HIGH"
+        },
+        {
+            "priority": 2,
+            "action": "...",
+            "impact": "...",
+            "effort": "..."
+        },
+        {
+            "priority": 3,
+            "action": "...",
+            "impact": "...",
+            "effort": "..."
+        }
+    ],
+    "gwi_alignment_notes": [
+        "Specific note about how strategy aligns or misaligns with GWI research",
+        "Another GWI-informed observation"
+    ]
+}
+"""
+
+    # Use fallback if OpenAI client is not available
+    if client is None:
+        print("Using fallback critique (OpenAI client not initialized)")
+        return generate_fallback_critique(
+            current_followers,
+            posts_per_week,
+            platform_allocation,
+            content_mix,
+            audience_mix,
+            progress_to_goal,
+            preset
+        )
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4-turbo-preview",
+            messages=[
+                {"role": "system", "content": "You are an expert social media growth strategist. Provide balanced, specific critiques with actionable suggestions. Always return valid JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=2500,
+            response_format={"type": "json_object"}
+        )
+
+        import json
+        result = json.loads(response.choices[0].message.content)
+        return result
+
+    except Exception as e:
+        import traceback
+        print(f"AI Critique Error: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+        return generate_fallback_critique(
+            current_followers,
+            posts_per_week,
+            platform_allocation,
+            content_mix,
+            audience_mix,
+            progress_to_goal,
+            preset
+        )
+
+
+def generate_fallback_critique(
+    current_followers: Dict[str, int],
+    posts_per_week: int,
+    platform_allocation: Dict[str, int],
+    content_mix: Dict[str, Dict[str, int]],
+    audience_mix: Dict[str, int],
+    progress_to_goal: float,
+    preset: str
+) -> Dict[str, Any]:
+    """
+    Generate rule-based critique when OpenAI is unavailable
+    """
+
+    # Analyze current values against GWI benchmarks
+    tiktok_alloc = platform_allocation.get("TikTok", 0)
+    instagram_alloc = platform_allocation.get("Instagram", 0)
+    facebook_alloc = platform_allocation.get("Facebook", 0)
+    youtube_alloc = platform_allocation.get("YouTube", 0)
+
+    parents_pct = audience_mix.get("parents", 80)
+    gifters_pct = audience_mix.get("gifters", 10)
+    collectors_pct = audience_mix.get("collectors", 10)
+
+    # Determine ratings
+    posting_rating = "OPTIMAL" if 24 <= posts_per_week <= 32 else ("ACCEPTABLE" if 20 <= posts_per_week <= 40 else "NEEDS_ADJUSTMENT")
+
+    # Platform allocation assessment based on audience mix
+    expected_tiktok = 25 + (parents_pct * 0.15)  # Parents over-index on TikTok
+    expected_facebook = 15 + (gifters_pct * 0.2)  # Gifters over-index on Facebook
+    platform_rating = "OPTIMAL" if abs(tiktok_alloc - expected_tiktok) < 10 and abs(facebook_alloc - expected_facebook) < 10 else "NEEDS_ADJUSTMENT"
+
+    # Goal feasibility
+    if progress_to_goal >= 95:
+        goal_rating = "ON_TRACK"
+    elif progress_to_goal >= 85:
+        goal_rating = "ACHIEVABLE"
+    elif progress_to_goal >= 70:
+        goal_rating = "STRETCH"
+    else:
+        goal_rating = "UNLIKELY"
+
+    # Overall assessment
+    if posting_rating == "OPTIMAL" and platform_rating == "OPTIMAL" and goal_rating in ["ON_TRACK", "ACHIEVABLE"]:
+        overall_rating = "STRONG"
+    elif goal_rating == "UNLIKELY":
+        overall_rating = "AT_RISK"
+    elif posting_rating == "NEEDS_ADJUSTMENT" or platform_rating == "NEEDS_ADJUSTMENT":
+        overall_rating = "NEEDS_WORK"
+    else:
+        overall_rating = "GOOD"
+
+    # Build optimizations
+    optimizations = []
+
+    if posts_per_week > 35:
+        optimizations.append({
+            "priority": len(optimizations) + 1,
+            "action": f"Reduce posting frequency from {posts_per_week} to 28-32 posts/week to improve engagement quality",
+            "impact": "Higher engagement rate per post, better algorithmic performance",
+            "effort": "LOW"
+        })
+    elif posts_per_week < 20:
+        optimizations.append({
+            "priority": len(optimizations) + 1,
+            "action": f"Increase posting frequency from {posts_per_week} to 24-28 posts/week to improve reach",
+            "impact": "Expanded reach and discovery potential",
+            "effort": "MEDIUM"
+        })
+
+    if parents_pct > 60 and tiktok_alloc < 30:
+        optimizations.append({
+            "priority": len(optimizations) + 1,
+            "action": f"Increase TikTok allocation from {tiktok_alloc}% to 30%+ to better reach parent segment (1.30x over-index)",
+            "impact": "Better alignment with primary audience platform preferences",
+            "effort": "LOW"
+        })
+
+    if gifters_pct > 15 and facebook_alloc < 20:
+        optimizations.append({
+            "priority": len(optimizations) + 1,
+            "action": f"Increase Facebook allocation from {facebook_alloc}% to 20%+ to capture gifter segment (1.14x index)",
+            "impact": "Improved gifter audience reach during key shopping periods",
+            "effort": "LOW"
+        })
+
+    # Ensure we have at least 3 optimizations
+    if len(optimizations) < 3:
+        optimizations.append({
+            "priority": len(optimizations) + 1,
+            "action": "Increase Short Video content on TikTok to 90%+ of TikTok posts",
+            "impact": "Maximizes platform-native content performance",
+            "effort": "LOW"
+        })
+    if len(optimizations) < 3:
+        optimizations.append({
+            "priority": len(optimizations) + 1,
+            "action": "Add Carousel content on Instagram (20-25% of IG posts) for higher engagement",
+            "impact": "Carousels see 1.25x engagement multiplier on Instagram",
+            "effort": "MEDIUM"
+        })
+    if len(optimizations) < 3:
+        optimizations.append({
+            "priority": len(optimizations) + 1,
+            "action": "Maintain consistent posting schedule across all platforms",
+            "impact": "Algorithm favorability and audience expectation management",
+            "effort": "LOW"
+        })
+
+    return {
+        "overall_assessment": {
+            "rating": overall_rating,
+            "summary": f"Strategy is {'well-positioned' if overall_rating in ['STRONG', 'GOOD'] else 'showing gaps that need attention'}. Current projection is {progress_to_goal:.0f}% of goal. {'Platform allocation aligns with GWI research.' if platform_rating == 'OPTIMAL' else 'Platform allocation could better match target audience indices.'}"
+        },
+        "category_assessments": [
+            {
+                "category": "Posting Frequency",
+                "rating": posting_rating,
+                "current_value": f"{posts_per_week} posts/week",
+                "assessment": f"{'Optimal range for engagement quality' if posting_rating == 'OPTIMAL' else 'Above 32 posts/week may reduce per-post engagement' if posts_per_week > 32 else 'Below 24 posts/week limits reach potential'}",
+                "suggestion": None if posting_rating == "OPTIMAL" else f"Adjust to 28 posts/week for optimal balance",
+                "suggested_value": None if posting_rating == "OPTIMAL" else "28 posts/week"
+            },
+            {
+                "category": "Platform Allocation",
+                "rating": platform_rating,
+                "current_value": f"TikTok {tiktok_alloc}%, Instagram {instagram_alloc}%, Facebook {facebook_alloc}%, YouTube {youtube_alloc}%",
+                "assessment": f"{'Allocation matches target audience platform indices' if platform_rating == 'OPTIMAL' else 'Allocation could better reflect GWI audience indices'}",
+                "suggestion": None if platform_rating == "OPTIMAL" else f"Consider TikTok {int(expected_tiktok)}%, Facebook {int(expected_facebook)}% based on audience mix",
+                "suggested_value": None if platform_rating == "OPTIMAL" else f"TikTok {int(expected_tiktok)}%, Facebook {int(expected_facebook)}%"
+            },
+            {
+                "category": "Content Mix",
+                "rating": "ACCEPTABLE",
+                "current_value": "Platform-specific content formats",
+                "assessment": "Content mix should emphasize Short Video on TikTok (90%+), Carousels on Instagram (20-25%)",
+                "suggestion": "Ensure TikTok is 90%+ Short Video, Instagram includes 20%+ Carousels",
+                "suggested_value": None
+            },
+            {
+                "category": "Audience Alignment",
+                "rating": "OPTIMAL" if abs(parents_pct + gifters_pct + collectors_pct - 100) < 5 else "ACCEPTABLE",
+                "current_value": f"Parents {parents_pct}%, Gifters {gifters_pct}%, Collectors {collectors_pct}%",
+                "assessment": f"{'Primary focus on parents aligns with GWI data showing 1.30x TikTok index' if parents_pct > 60 else 'Balanced audience targeting across segments'}",
+                "suggestion": None,
+                "suggested_value": None
+            },
+            {
+                "category": "Goal Feasibility",
+                "rating": goal_rating,
+                "current_value": f"{progress_to_goal:.0f}% of goal projected",
+                "assessment": f"{'On track to achieve 2x growth target' if goal_rating == 'ON_TRACK' else 'Achievable with consistent execution' if goal_rating == 'ACHIEVABLE' else 'Requires optimization to reach target' if goal_rating == 'STRETCH' else 'Significant changes needed to reach goal'}",
+                "suggestion": None if goal_rating in ["ON_TRACK", "ACHIEVABLE"] else "Review optimizations below to close gap",
+                "suggested_value": None
+            }
+        ],
+        "top_optimizations": optimizations[:3],
+        "gwi_alignment_notes": [
+            f"Parents ({parents_pct}% of target) over-index 1.30x on TikTok - {'current TikTok allocation supports this' if tiktok_alloc >= 28 else 'consider increasing TikTok allocation'}",
+            f"Gifters ({gifters_pct}% of target) over-index 1.14x on Facebook - {'Facebook allocation captures this segment' if facebook_alloc >= 15 else 'Facebook may be underweighted for gifter reach'}"
+        ]
+    }
+
+
 def calculate_campaign_phases(
     months: int,
     posts_per_week: int,

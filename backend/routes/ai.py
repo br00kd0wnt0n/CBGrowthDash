@@ -3,8 +3,11 @@ AI Insights API Routes
 """
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
-from models.schemas import ForecastRequest, AIInsightsResponse, AIScenario, InsightRequest, InsightResponse, ParamTuneRequest, ParamTuneResponse
-from services.ai_service import analyze_strategy, generate_gap_insight, tune_parameters
+from models.schemas import (
+    ForecastRequest, AIInsightsResponse, AIScenario, InsightRequest, InsightResponse,
+    ParamTuneRequest, ParamTuneResponse, CritiqueRequest, CritiqueResponse
+)
+from services.ai_service import analyze_strategy, generate_gap_insight, tune_parameters, critique_strategy
 from services.forecast_service import load_historical_data
 
 router = APIRouter(prefix="/api", tags=["AI Insights"])
@@ -84,3 +87,47 @@ async def ai_tune_parameters(req: ParamTuneRequest):
         return ParamTuneResponse(**resp)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Parameter tuning failed: {e}")
+
+
+@router.post("/ai/critique", response_model=CritiqueResponse)
+async def ai_critique_strategy(req: CritiqueRequest):
+    """
+    Provide a balanced AI critique of the user's current strategy.
+    Assesses posts/week, platform allocation, content mix, audience alignment,
+    and goal feasibility against GWI research and best practices.
+    """
+    try:
+        # Get historical data for context
+        data_dir = Path(__file__).parent.parent / "data"
+        historical_data = load_historical_data(data_dir)
+
+        # Build budget info
+        budget_info = {
+            "paid_media_weekly": req.paid_budget_week or 0,
+            "creator_weekly": req.creator_budget_week or 0,
+            "acquisition_weekly": req.acquisition_budget_week or 0,
+            "cpf_range": req.cpf_range or {"min": 0.10, "mid": 0.15, "max": 0.20}
+        }
+
+        # Get critique
+        result = critique_strategy(
+            current_followers=req.current_followers,
+            posts_per_week=req.posts_per_week,
+            platform_allocation=req.platform_allocation,
+            content_mix=req.content_mix,
+            months=req.months,
+            preset=req.preset,
+            audience_mix=req.audience_mix,
+            projected_total=req.projected_total,
+            goal=req.goal,
+            historical_data=historical_data,
+            budget_info=budget_info
+        )
+
+        return CritiqueResponse(**result)
+
+    except Exception as e:
+        import traceback
+        print(f"Critique error: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Strategy critique failed: {str(e)}")

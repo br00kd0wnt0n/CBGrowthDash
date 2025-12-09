@@ -150,6 +150,49 @@ export interface ContextualInsightsResponse {
   insights: ContextualInsight[];
 }
 
+// AI Strategy Critique types
+export interface CritiqueRequest {
+  current_followers: Record<string, number>;
+  posts_per_week: number;
+  platform_allocation: Record<string, number>;
+  content_mix: Record<string, Record<string, number>>;
+  months: number;
+  preset: string;
+  audience_mix: Record<string, number>;
+  projected_total: number;
+  goal: number;
+  paid_budget_week?: number;
+  creator_budget_week?: number;
+  acquisition_budget_week?: number;
+  cpf_range?: { min: number; mid: number; max: number };
+}
+
+export interface CategoryAssessment {
+  category: string;
+  rating: 'OPTIMAL' | 'ACCEPTABLE' | 'NEEDS_ADJUSTMENT' | 'ON_TRACK' | 'ACHIEVABLE' | 'STRETCH' | 'UNLIKELY';
+  current_value: string;
+  assessment: string;
+  suggestion: string | null;
+  suggested_value: string | null;
+}
+
+export interface Optimization {
+  priority: number;
+  action: string;
+  impact: string;
+  effort: 'LOW' | 'MEDIUM' | 'HIGH';
+}
+
+export interface CritiqueResponse {
+  overall_assessment: {
+    rating: 'STRONG' | 'GOOD' | 'NEEDS_WORK' | 'AT_RISK';
+    summary: string;
+  };
+  category_assessments: CategoryAssessment[];
+  top_optimizations: Optimization[];
+  gwi_alignment_notes: string[];
+}
+
 // User Preset types
 export interface UserPresetConfig {
   currentFollowers: Record<string, number>;
@@ -248,4 +291,10 @@ export const api = {
     method: 'DELETE',
   }),
   checkDbHealth: () => request<{ status: string; message: string }>('/api/user-presets/health/db'),
+  // AI Strategy Critique
+  getStrategyCritique: (data: CritiqueRequest) => request<CritiqueResponse>('/api/ai/critique', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }),
 };
