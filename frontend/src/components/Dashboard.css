@@ -1949,6 +1949,31 @@
   gap: 1.5rem;
 }
 
+/* Assessment + GWI Side by Side Row */
+.assessment-gwi-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.assessment-gwi-row .overall-assessment {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.assessment-gwi-row .gwi-notes {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 800px) {
+  .assessment-gwi-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Overall Assessment */
 .overall-assessment {
   padding: 1.5rem;

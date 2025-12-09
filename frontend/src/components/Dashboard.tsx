@@ -1860,25 +1860,26 @@ export function Dashboard() {
 
             {strategyCritique && !critiqueLoading && (
               <div className="critique-results">
-                {/* Overall Assessment */}
-                <div className={`overall-assessment rating-${strategyCritique.overall_assessment.rating.toLowerCase().replace('_', '-')}`}>
-                  <div className="assessment-badge">
-                    {strategyCritique.overall_assessment.rating.replace('_', ' ')}
+                {/* Overall Assessment + GWI Notes - Side by Side */}
+                <div className="assessment-gwi-row">
+                  <div className={`overall-assessment rating-${strategyCritique.overall_assessment.rating.toLowerCase().replace('_', '-')}`}>
+                    <div className="assessment-badge">
+                      {strategyCritique.overall_assessment.rating.replace('_', ' ')}
+                    </div>
+                    <p className="assessment-summary">{strategyCritique.overall_assessment.summary}</p>
                   </div>
-                  <p className="assessment-summary">{strategyCritique.overall_assessment.summary}</p>
-                </div>
 
-                {/* GWI Alignment Notes - Prominent Position */}
-                {strategyCritique.gwi_alignment_notes.length > 0 && (
-                  <div className="gwi-notes">
-                    <h4>GWI Research Alignment</h4>
-                    <ul>
-                      {strategyCritique.gwi_alignment_notes.map((note, idx) => (
-                        <li key={idx}>{note}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                  {strategyCritique.gwi_alignment_notes.length > 0 && (
+                    <div className="gwi-notes">
+                      <h4>GWI Research Alignment</h4>
+                      <ul>
+                        {strategyCritique.gwi_alignment_notes.map((note, idx) => (
+                          <li key={idx}>{note}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
 
                 {/* Category Assessments */}
                 <div className="category-assessments">
