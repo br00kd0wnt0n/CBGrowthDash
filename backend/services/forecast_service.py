@@ -110,6 +110,25 @@ def consistency_boost(posts_per_week: float, min_ok: float, max_ok: float) -> fl
     return 1.0
 
 
+def band_quality(posts_per_week: float, min_ok: float, max_ok: float, soft: float, hard: float) -> float:
+    """Quality factor for per-post effectiveness relative to recommended band.
+    Peaks in-band, slightly lower below min, and tapers beyond soft/hard caps.
+    Range ~[0.8, 1.0].
+    """
+    if posts_per_week < min_ok:
+        # Slightly lower quality when under-posting
+        return 0.9
+    if posts_per_week <= max_ok:
+        return 1.0
+    if posts_per_week <= soft:
+        return 0.95
+    if posts_per_week >= hard:
+        return 0.80
+    # Between soft and hard: linear from 0.95 -> 0.80
+    ratio = (posts_per_week - soft) / max(hard - soft, 1e-6)
+    return float(0.95 - 0.15 * ratio)
+
+
 def compute_engagement_index(mentions_df: pd.DataFrame, sentiment_df: pd.DataFrame) -> pd.Series:
     """Compute engagement index from mentions and sentiment data"""
     df = mentions_df[["Time"]].copy()
@@ -222,13 +241,16 @@ def forecast_growth(
         total_added_paid = 0.0
 
         for p in PLATFORMS:
-            freq_eff = saturating_effect(posts_per_platform[p], FREQ_HALF_SAT[p])
+            freq_eff_raw = saturating_effect(posts_per_platform[p], FREQ_HALF_SAT[p])
             c_mult = blended_content_multiplier(p, content_mix_norm[p], content_mult_override=content_mult)
             div_factor = diversity_factor(content_mix_norm[p])
 
             freq_cfg = RECOMMENDED_FREQ[p]
             over_pen = oversaturation_penalty(posts_per_platform[p], freq_cfg["soft"], freq_cfg["hard"])
             consist = consistency_boost(posts_per_platform[p], freq_cfg["min"], freq_cfg["max"])
+            # Cap frequency effect at the top of the healthy band to avoid unrealistic gains beyond max.
+            freq_cap = saturating_effect(freq_cfg["max"], FREQ_HALF_SAT[p])
+            freq_eff = min(freq_eff_raw, freq_cap)
 
             base_rate = BMR[p] / 4.0
             plan_intensity = (1.0 + sensitivity * ei * freq_eff * c_mult * div_factor * over_pen * consist)
@@ -243,7 +265,8 @@ def forecast_growth(
             mult_add = followers[p] * weekly_rate
 
             quality = 0.5 + 0.5 * ei
-            sat_quality = 0.5 + 0.5 * freq_eff
+            # Favor per-post quality within the recommended band; gently taper above/below
+            sat_quality = band_quality(posts_per_platform[p], freq_cfg["min"], freq_cfg["max"], freq_cfg["soft"], freq_cfg["hard"]) 
             per_post = PPG[p] * acq_scalar * quality * sat_quality * c_mult * div_factor * over_pen * consist
             add_posts = posts_per_platform[p] * per_post
 
