@@ -36,17 +36,27 @@ RECOMMENDATIONS:
 - Collector campaigns: Balance with nostalgia-driven content
 """
 
-# Initialize OpenAI client only if API key is available
-client: Optional[object] = None
-try:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if api_key:
-        from openai import OpenAI
-        client = OpenAI(api_key=api_key)
-    else:
-        print("Warning: OPENAI_API_KEY not set. AI features will use fallback recommendations.")
-except Exception as e:
-    print(f"Warning: Could not initialize OpenAI client: {e}. Using fallback recommendations.")
+# Lazy initialization of OpenAI client
+_client: Optional[object] = None
+_client_initialized: bool = False
+
+
+def get_openai_client():
+    """Get OpenAI client with lazy initialization"""
+    global _client, _client_initialized
+    if not _client_initialized:
+        _client_initialized = True
+        try:
+            api_key = os.getenv("OPENAI_API_KEY")
+            if api_key:
+                from openai import OpenAI
+                _client = OpenAI(api_key=api_key)
+                print("OpenAI client initialized successfully")
+            else:
+                print("Warning: OPENAI_API_KEY not set. AI features will use fallback recommendations.")
+        except Exception as e:
+            print(f"Warning: Could not initialize OpenAI client: {e}. Using fallback recommendations.")
+    return _client
 
 def analyze_strategy(
     current_followers: Dict[str, int],
@@ -172,6 +182,7 @@ Return ONLY valid JSON in this exact format:
 """
 
     # Use fallback if OpenAI client is not available
+    client = get_openai_client()
     if client is None:
         print("Using fallback recommendations (OpenAI client not initialized)")
         return generate_fallback_recommendations(
@@ -539,6 +550,7 @@ Return ONLY valid JSON in this exact format:
 """
 
     # Use fallback if OpenAI client is not available
+    client = get_openai_client()
     if client is None:
         print("Using fallback critique (OpenAI client not initialized)")
         return generate_fallback_critique(
