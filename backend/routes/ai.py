@@ -121,7 +121,8 @@ async def ai_critique_strategy(req: CritiqueRequest):
             projected_total=req.projected_total,
             goal=req.goal,
             historical_data=historical_data,
-            budget_info=budget_info
+            budget_info=budget_info,
+            previous_suggestions=req.previous_suggestions
         )
 
         return CritiqueResponse(**result)

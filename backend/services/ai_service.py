@@ -368,7 +368,8 @@ def critique_strategy(
     projected_total: float,
     goal: float,
     historical_data: Dict[str, Any],
-    budget_info: Optional[Dict[str, Any]] = None
+    budget_info: Optional[Dict[str, Any]] = None,
+    previous_suggestions: Optional[List[Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
     """
     Provide a balanced critique and optimization suggestions for the user's current strategy.
@@ -386,13 +387,27 @@ def critique_strategy(
             "cpf_range": {"min": 0.10, "mid": 0.15, "max": 0.20}
         }
 
+    # Build previous suggestions context if available
+    previous_context = ""
+    if previous_suggestions and len(previous_suggestions) > 0:
+        previous_context = """
+PREVIOUS ANALYSIS CONTEXT:
+The user has already received these optimization suggestions and may have acted on some of them.
+Do NOT repeat the same suggestions. Instead, provide NEW insights or acknowledge improvements made.
+
+Previous suggestions given:
+"""
+        for i, opt in enumerate(previous_suggestions, 1):
+            previous_context += f"{i}. [{opt.get('priority', 'N/A')}] {opt.get('action', 'Unknown action')} (Impact: {opt.get('impact', 'Unknown')})\n"
+        previous_context += "\nIMPORTANT: Provide fresh, different recommendations. If a previous suggestion was followed, acknowledge the improvement. If not, you may mention it briefly but focus on NEW optimizations.\n"
+
     # Build comprehensive context for AI critique
     context = f"""
 You are an expert social media growth strategist providing a balanced critique of a Care Bears growth campaign.
 Use the GWI 2024 research data to assess the strategy against audience segment behaviors.
 
 {GWI_RESEARCH_CONTEXT}
-
+{previous_context}
 CLIENT OBJECTIVE: Grow from {total_followers:,} to {goal:,} followers (2x growth) within 12 months.
 
 CURRENT STRATEGY CONFIGURATION:
@@ -434,6 +449,12 @@ BUDGET INFORMATION:
     prompt = context + """
 TASK:
 Provide a balanced, expert critique of this strategy. Be specific and actionable.
+
+IMPORTANT RULES:
+- NEVER suggest a value that is already the current configuration (check the exact numbers above carefully)
+- If a category is already optimal, set suggestion to null and acknowledge it's well-configured
+- Only suggest CHANGES that would actually improve the strategy
+- If suggesting a platform allocation change, ensure the suggestion is DIFFERENT from current values
 
 Assess these areas:
 1. POSTING FREQUENCY: Is the posts/week optimal? Consider engagement quality vs. reach.

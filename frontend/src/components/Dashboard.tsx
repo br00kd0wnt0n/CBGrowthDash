@@ -529,6 +529,9 @@ export function Dashboard() {
     setCritiqueLoading(true)
     setCritiqueError(null)
     try {
+      // Pass previous suggestions if re-analyzing
+      const previousSuggestions = strategyCritique?.top_optimizations || null
+
       const critique = await api.getStrategyCritique({
         current_followers: currentFollowers,
         posts_per_week: postsPerWeek,
@@ -543,6 +546,7 @@ export function Dashboard() {
         creator_budget_week: enableBudget ? creatorBudgetWeek : 0,
         acquisition_budget_week: enableBudget ? acquisitionBudgetWeek : 0,
         cpf_range: { min: cpfMin, mid: cpfMid, max: cpfMax },
+        previous_suggestions: previousSuggestions,
       })
       setStrategyCritique(critique)
     } catch (err) {
@@ -1236,49 +1240,6 @@ export function Dashboard() {
                     )}
                   </div>
                 ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="panel-section ai-section">
-            <div className="section-header">
-              <div className="section-title-group">
-                AI Advisor
-              </div>
-              <HelpTooltip text="AI analyzes your strategy against GWI research and client targets to provide optimization suggestions" />
-            </div>
-            <div className="section-content">
-              <div className="section-content-inner">
-                <div className="ai-advisor-trigger">
-                  <p style={{fontSize:'0.75rem', color:'var(--text-secondary)', marginBottom:'0.75rem'}}>
-                    Get a comprehensive critique of your current strategy with actionable recommendations.
-                  </p>
-                  <button
-                    onClick={() => {
-                      // Scroll to critique module and trigger analysis
-                      const critiqueModule = document.querySelector('.strategy-critique-module');
-                      if (critiqueModule) {
-                        critiqueModule.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }
-                      // Trigger the critique analysis
-                      getStrategyCritique();
-                    }}
-                    className="ai-button"
-                    disabled={critiqueLoading}
-                  >
-                    {critiqueLoading ? 'Analyzing...' : strategyCritique ? 'View Assessment' : 'Analyze Strategy'}
-                  </button>
-                  {strategyCritique && (
-                    <div style={{marginTop:'0.75rem', fontSize:'0.7rem', color:'var(--text-secondary)'}}>
-                      <span style={{color: strategyCritique.overall_assessment.rating === 'STRONG' ? '#22c55e' :
-                                          strategyCritique.overall_assessment.rating === 'GOOD' ? '#22c55e' :
-                                          strategyCritique.overall_assessment.rating === 'NEEDS_WORK' ? '#f59e0b' : '#ef4444'}}>
-                        ● {strategyCritique.overall_assessment.rating}
-                      </span>
-                      {' '} — Scroll down to view full assessment
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           </div>

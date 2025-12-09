@@ -165,6 +165,7 @@ export interface CritiqueRequest {
   creator_budget_week?: number;
   acquisition_budget_week?: number;
   cpf_range?: { min: number; mid: number; max: number };
+  previous_suggestions?: Optimization[] | null;
 }
 
 export interface CategoryAssessment {

@@ -184,6 +184,11 @@ class CritiqueRequest(BaseModel):
     creator_budget_week: Optional[float] = Field(default=0, description="Weekly creator budget")
     acquisition_budget_week: Optional[float] = Field(default=0, description="Weekly acquisition budget")
     cpf_range: Optional[Dict[str, float]] = Field(default=None, description="CPF range {min, mid, max}")
+    # Previous suggestions context for re-analysis
+    previous_suggestions: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="Previous optimization suggestions to provide context for re-analysis"
+    )
 
 
 class CategoryAssessment(BaseModel):

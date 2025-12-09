@@ -1886,10 +1886,12 @@
 }
 
 .critique-trigger-btn {
-  padding: 0.5rem 1rem;
+  width: auto !important;
+  padding: 0.5rem 1rem !important;
   font-size: 0.85rem;
   font-weight: 600;
   white-space: nowrap;
+  margin-bottom: 0 !important;
 }
 
 .critique-error {
