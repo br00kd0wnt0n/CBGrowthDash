@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { LineChart, ComposedChart, BarChart, Bar, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, LabelList } from 'recharts'
-import { api, type HistoricalDataResponse, type ForecastRequest, type ForecastResponse, type AIInsightsResponse, type AIScenario, type PlatformMetricsResponse, type AudiencePreset, type AllocationRecommendation } from '../services/api'
+import { api, type HistoricalDataResponse, type ForecastRequest, type ForecastResponse, type AIInsightsResponse, type AIScenario, type PlatformMetricsResponse, type AudiencePreset, type AllocationRecommendation, type UserPresetResponse, type UserPresetConfig } from '../services/api'
 import './Dashboard.css'
 
 // Number formatting utility (currently unused but available for future use)
@@ -35,10 +35,10 @@ export function Dashboard() {
 
   // Form state with real-time updates
   const [currentFollowers, setCurrentFollowers] = useState({
-    Instagram: 384000,
-    TikTok: 572700,
-    YouTube: 381000,
-    Facebook: 590000
+    Instagram: 385400,
+    TikTok: 574200,
+    YouTube: 382000,
+    Facebook: 593200
   })
   const [postsPerWeek, setPostsPerWeek] = useState(40)
   const [platformAllocation, setPlatformAllocation] = useState({
@@ -56,8 +56,8 @@ export function Dashboard() {
   const [preset, setPreset] = useState('Balanced')
   const [months, setMonths] = useState(12)
   // Paid funnel (CPM) state
-  const [enablePaid, setEnablePaid] = useState(false)
-  const [paidFunnelBudgetWeek, setPaidFunnelBudgetWeek] = useState(2500)
+  const [enablePaid, setEnablePaid] = useState(true)
+  const [paidFunnelBudgetWeek, setPaidFunnelBudgetWeek] = useState(600)
   const [paidCPM, setPaidCPM] = useState(5)
   const [paidAllocation, setPaidAllocation] = useState({
     Instagram: 35,
@@ -67,13 +67,13 @@ export function Dashboard() {
   })
   // Budget & CPF state
   const [enableBudget, setEnableBudget] = useState(true)
-  const [paidBudgetWeek, setPaidBudgetWeek] = useState(641)        // ~$33.3k/year
-  const [creatorBudgetWeek, setCreatorBudgetWeek] = useState(641)   // ~$33.3k/year
-  const [acquisitionBudgetWeek, setAcquisitionBudgetWeek] = useState(641) // ~$33.3k/year (total = $100k/year)
+  const [paidBudgetWeek, setPaidBudgetWeek] = useState(1250)
+  const [creatorBudgetWeek, setCreatorBudgetWeek] = useState(0)
+  const [acquisitionBudgetWeek, setAcquisitionBudgetWeek] = useState(0)
   const [cpfMin, setCpfMin] = useState(0.10)
   const [cpfMid, setCpfMid] = useState(0.15)
   const [cpfMax, setCpfMax] = useState(0.20)
-  const [valuePerFollower, setValuePerFollower] = useState(0)
+  const [valuePerFollower, setValuePerFollower] = useState(0.20)
 
   // AI Insights state
   const [aiInsights, setAiInsights] = useState<AIInsightsResponse | null>(null)
@@ -125,10 +125,19 @@ export function Dashboard() {
 
   // GWI Research state
   const [audiencePresets, setAudiencePresets] = useState<AudiencePreset[]>([])
-  const [selectedPresetId, setSelectedPresetId] = useState<string>('balanced')
-  const [audienceMix, setAudienceMix] = useState({ parents: 60, gifters: 25, collectors: 15 })
+  const [selectedPresetId, setSelectedPresetId] = useState<string>('emerging_platforms')
+  const [audienceMix, setAudienceMix] = useState({ parents: 80, gifters: 10, collectors: 10 })
   const [recommendedAllocation, setRecommendedAllocation] = useState<AllocationRecommendation | null>(null)
   const [presetModified, setPresetModified] = useState(false)
+
+  // User Presets state (save/load)
+  const [showPresetOverlay, setShowPresetOverlay] = useState(false)
+  const [userPresets, setUserPresets] = useState<UserPresetResponse[]>([])
+  const [userPresetsLoading, setUserPresetsLoading] = useState(false)
+  const [savePresetName, setSavePresetName] = useState('')
+  const [savePresetDescription, setSavePresetDescription] = useState('')
+  const [presetSaveError, setPresetSaveError] = useState<string | null>(null)
+  const [presetSaveSuccess, setPresetSaveSuccess] = useState(false)
 
   const totalFollowers = Object.values(currentFollowers).reduce((a, b) => a + b, 0)
   const goalFollowers = totalFollowers * 2 // Double in 12 months
@@ -264,6 +273,117 @@ export function Dashboard() {
       console.error('Failed to load platform metrics:', err)
     }
   }
+
+  // User Preset functions
+  const loadUserPresets = async () => {
+    setUserPresetsLoading(true)
+    try {
+      const presets = await api.getUserPresets()
+      setUserPresets(presets)
+    } catch (err) {
+      console.error('Failed to load user presets:', err)
+    } finally {
+      setUserPresetsLoading(false)
+    }
+  }
+
+  const getCurrentConfig = (): UserPresetConfig => ({
+    currentFollowers,
+    postsPerWeek,
+    platformAllocation,
+    contentMix,
+    preset,
+    months,
+    enablePaid,
+    paidFunnelBudgetWeek,
+    paidCPM,
+    paidAllocation,
+    enableBudget,
+    paidBudgetWeek,
+    creatorBudgetWeek,
+    acquisitionBudgetWeek,
+    cpfMin,
+    cpfMid,
+    cpfMax,
+    valuePerFollower,
+    audienceMix,
+    selectedPresetId,
+  })
+
+  const applyUserPresetConfig = (config: UserPresetConfig) => {
+    setCurrentFollowers(config.currentFollowers)
+    setPostsPerWeek(config.postsPerWeek)
+    setPlatformAllocation(config.platformAllocation)
+    setContentMix(config.contentMix)
+    setPreset(config.preset)
+    setMonths(config.months)
+    setEnablePaid(config.enablePaid)
+    setPaidFunnelBudgetWeek(config.paidFunnelBudgetWeek)
+    setPaidCPM(config.paidCPM)
+    setPaidAllocation(config.paidAllocation)
+    setEnableBudget(config.enableBudget)
+    setPaidBudgetWeek(config.paidBudgetWeek)
+    setCreatorBudgetWeek(config.creatorBudgetWeek)
+    setAcquisitionBudgetWeek(config.acquisitionBudgetWeek)
+    setCpfMin(config.cpfMin)
+    setCpfMid(config.cpfMid)
+    setCpfMax(config.cpfMax)
+    setValuePerFollower(config.valuePerFollower)
+    setAudienceMix(config.audienceMix)
+    setSelectedPresetId(config.selectedPresetId)
+  }
+
+  const saveUserPreset = async () => {
+    if (!savePresetName.trim()) {
+      setPresetSaveError('Please enter a preset name')
+      return
+    }
+    setPresetSaveError(null)
+    setPresetSaveSuccess(false)
+    try {
+      await api.createUserPreset({
+        name: savePresetName.trim(),
+        description: savePresetDescription.trim() || undefined,
+        config: getCurrentConfig(),
+      })
+      setPresetSaveSuccess(true)
+      setSavePresetName('')
+      setSavePresetDescription('')
+      loadUserPresets()
+      setTimeout(() => setPresetSaveSuccess(false), 3000)
+    } catch (err) {
+      setPresetSaveError('Failed to save preset')
+      console.error('Failed to save preset:', err)
+    }
+  }
+
+  const loadUserPreset = (preset: UserPresetResponse) => {
+    applyUserPresetConfig(preset.config)
+    setShowPresetOverlay(false)
+  }
+
+  const deleteUserPreset = async (id: number) => {
+    try {
+      await api.deleteUserPreset(id)
+      loadUserPresets()
+    } catch (err) {
+      console.error('Failed to delete preset:', err)
+    }
+  }
+
+  const openPresetOverlay = () => {
+    loadUserPresets()
+    setShowPresetOverlay(true)
+    setPresetSaveError(null)
+    setPresetSaveSuccess(false)
+  }
+
+  // Listen for custom event from header button
+  useEffect(() => {
+    const handleOpenPresetOverlay = () => openPresetOverlay()
+    window.addEventListener('openPresetOverlay', handleOpenPresetOverlay)
+    return () => window.removeEventListener('openPresetOverlay', handleOpenPresetOverlay)
+  }, [])
 
   const runForecast = async () => {
     setLoading(true)
@@ -600,6 +720,74 @@ export function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Preset Overlay */}
+      {showPresetOverlay && (
+        <div className="preset-overlay">
+          <div className="preset-overlay-content">
+            <div className="preset-overlay-header">
+              <h2>Save / Load Presets</h2>
+              <button className="preset-close-btn" onClick={() => setShowPresetOverlay(false)}>&times;</button>
+            </div>
+
+            <div className="preset-section">
+              <h3>Save Current Settings</h3>
+              <div className="preset-save-form">
+                <input
+                  type="text"
+                  placeholder="Preset name"
+                  value={savePresetName}
+                  onChange={e => setSavePresetName(e.target.value)}
+                  className="preset-input"
+                />
+                <input
+                  type="text"
+                  placeholder="Description (optional)"
+                  value={savePresetDescription}
+                  onChange={e => setSavePresetDescription(e.target.value)}
+                  className="preset-input"
+                />
+                <button className="preset-save-btn" onClick={saveUserPreset}>
+                  Save Preset
+                </button>
+                {presetSaveError && <div className="preset-error">{presetSaveError}</div>}
+                {presetSaveSuccess && <div className="preset-success">Preset saved successfully!</div>}
+              </div>
+            </div>
+
+            <div className="preset-section">
+              <h3>Load Saved Presets</h3>
+              {userPresetsLoading ? (
+                <div className="preset-loading">Loading presets...</div>
+              ) : userPresets.length === 0 ? (
+                <div className="preset-empty">No saved presets yet</div>
+              ) : (
+                <div className="preset-list">
+                  {userPresets.map(preset => (
+                    <div key={preset.id} className="preset-item">
+                      <div className="preset-item-info">
+                        <div className="preset-item-name">{preset.name}</div>
+                        {preset.description && <div className="preset-item-desc">{preset.description}</div>}
+                        <div className="preset-item-date">
+                          {new Date(preset.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="preset-item-actions">
+                        <button className="preset-load-btn" onClick={() => loadUserPreset(preset)}>
+                          Load
+                        </button>
+                        <button className="preset-delete-btn" onClick={() => deleteUserPreset(preset.id)}>
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Grid */}
       <div className="dashboard-grid">

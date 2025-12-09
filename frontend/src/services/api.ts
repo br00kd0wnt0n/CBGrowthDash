@@ -150,6 +150,45 @@ export interface ContextualInsightsResponse {
   insights: ContextualInsight[];
 }
 
+// User Preset types
+export interface UserPresetConfig {
+  currentFollowers: Record<string, number>;
+  postsPerWeek: number;
+  platformAllocation: Record<string, number>;
+  contentMix: Record<string, Record<string, number>>;
+  preset: string;
+  months: number;
+  enablePaid: boolean;
+  paidFunnelBudgetWeek: number;
+  paidCPM: number;
+  paidAllocation: Record<string, number>;
+  enableBudget: boolean;
+  paidBudgetWeek: number;
+  creatorBudgetWeek: number;
+  acquisitionBudgetWeek: number;
+  cpfMin: number;
+  cpfMid: number;
+  cpfMax: number;
+  valuePerFollower: number;
+  audienceMix: Record<string, number>;
+  selectedPresetId: string;
+}
+
+export interface UserPresetCreate {
+  name: string;
+  description?: string;
+  config: UserPresetConfig;
+}
+
+export interface UserPresetResponse {
+  id: number;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string | null;
+  config: UserPresetConfig;
+}
+
 export const api = {
   getHistoricalData: () => request<HistoricalDataResponse>('/api/historical'),
   runForecast: (data: ForecastRequest) => request<ForecastResponse>('/api/forecast', {
@@ -192,4 +231,21 @@ export const api = {
     request<ContextualInsightsResponse>(
       `/api/research/insights/contextual/${context}${platform ? `?platform=${platform}` : ''}${value ? `&value=${value}` : ''}`
     ),
+  // User Presets API endpoints
+  getUserPresets: () => request<UserPresetResponse[]>('/api/user-presets/'),
+  getUserPreset: (id: number) => request<UserPresetResponse>(`/api/user-presets/${id}`),
+  createUserPreset: (data: UserPresetCreate) => request<UserPresetResponse>('/api/user-presets/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }),
+  updateUserPreset: (id: number, data: UserPresetCreate) => request<UserPresetResponse>(`/api/user-presets/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }),
+  deleteUserPreset: (id: number) => request<{ message: string }>(`/api/user-presets/${id}`, {
+    method: 'DELETE',
+  }),
+  checkDbHealth: () => request<{ status: string; message: string }>('/api/user-presets/health/db'),
 };

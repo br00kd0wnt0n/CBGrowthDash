@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import forecast, ai, research
+from routes import forecast, ai, research, presets
 from models.schemas import StatusResponse
+from database import init_db, engine
 
 app = FastAPI(
     title="Care Bears Growth Planner API",
@@ -29,6 +30,13 @@ app.add_middleware(
 app.include_router(forecast.router)
 app.include_router(ai.router)
 app.include_router(research.router)
+app.include_router(presets.router)
+
+# Initialize database tables on startup
+@app.on_event("startup")
+async def startup_event():
+    if engine is not None:
+        init_db()
 
 
 @app.get("/", response_model=StatusResponse)

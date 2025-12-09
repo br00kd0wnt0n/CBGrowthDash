@@ -84,7 +84,7 @@
   display: grid;
   grid-template-columns: 350px 1fr;
   gap: 0;
-  height: calc(100vh - 180px);
+  min-height: calc(100vh - 180px);
 }
 
 /* Control Panel */
@@ -1300,7 +1300,7 @@
 
 .scenarios-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1rem;
   margin-top: 1rem;
 }
@@ -1461,10 +1461,6 @@
   .control-panel {
     padding: 1.5rem;
   }
-
-  .scenarios-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 1200px) {
@@ -1483,10 +1479,6 @@
   }
 
   .historical-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .scenarios-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1675,4 +1667,200 @@
   font-size: 0.8rem;
   color: var(--text-secondary);
   line-height: 1.4;
+}
+
+/* Preset Overlay */
+.preset-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.preset-overlay-content {
+  background: var(--bg-primary);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.preset-overlay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.preset-overlay-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+}
+
+.preset-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.preset-close-btn:hover {
+  color: var(--text-primary);
+}
+
+.preset-section {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.preset-section:last-child {
+  border-bottom: none;
+}
+
+.preset-section h3 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.preset-save-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.preset-input {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.preset-input:focus {
+  outline: none;
+  border-color: var(--fountain-blue);
+}
+
+.preset-save-btn {
+  padding: 0.75rem 1rem;
+  background: var(--fountain-blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.preset-save-btn:hover {
+  background: var(--primary);
+}
+
+.preset-error {
+  color: var(--bittersweet);
+  font-size: 0.85rem;
+}
+
+.preset-success {
+  color: var(--fountain-blue);
+  font-size: 0.85rem;
+}
+
+.preset-loading,
+.preset-empty {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 1rem;
+}
+
+.preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.preset-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.preset-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.preset-item-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.preset-item-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.preset-item-date {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.preset-item-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: 1rem;
+}
+
+.preset-load-btn {
+  padding: 0.5rem 1rem;
+  background: var(--fountain-blue);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.preset-load-btn:hover {
+  background: var(--primary);
+}
+
+.preset-delete-btn {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: var(--bittersweet);
+  border: 1px solid var(--bittersweet);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.preset-delete-btn:hover {
+  background: var(--bittersweet);
+  color: white;
 }

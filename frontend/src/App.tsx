@@ -23,6 +23,7 @@ function App() {
           </div>
         </div>
         <div className="header-right">
+          <button className="underhood-btn" onClick={() => window.dispatchEvent(new CustomEvent('openPresetOverlay'))}>Save / Load</button>
           <button className="underhood-btn" onClick={() => setShowInfo(true)}>Under the hood</button>
           <div className={`status-lockup ${status.online ? 'online' : 'offline'}`}>
             <img src="/logo.png" alt="Ralph" className="lockup-logo" />
