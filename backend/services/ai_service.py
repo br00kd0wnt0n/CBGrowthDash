@@ -73,7 +73,7 @@ def analyze_strategy(
             "total_annual_budget": 100000,
             "paid_media_weekly": 641,
             "growth_strategy_weekly": 1282,
-            "cpf_range": {"min": 0.50, "mid": 0.75, "max": 1.00}
+            "cpf_range": {"min": 0.10, "mid": 0.15, "max": 0.20}
         }
 
     annual_budget = budget_info.get("total_annual_budget", 100000)

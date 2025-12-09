@@ -23,7 +23,7 @@ async def get_ai_insights(request: ForecastRequest):
         # Build budget info from request
         paid_weekly = (request.paid_budget_per_week_total or 0) + (request.creator_budget_per_week_total or 0)
         growth_weekly = request.acquisition_budget_per_week_total or 0
-        cpf = request.cpf_paid or {"min": 0.50, "mid": 0.75, "max": 1.00}
+        cpf = request.cpf_paid or {"min": 0.10, "mid": 0.15, "max": 0.20}
 
         budget_info = {
             "total_annual_budget": (paid_weekly + growth_weekly) * 52,

@@ -65,7 +65,7 @@ PAID_FUNNEL_DEFAULT = {
 }
 
 # Cost-per-follower default ranges (USD)
-CPF_DEFAULT = {"min": 0.50, "mid": 0.75, "max": 1.00}
+CPF_DEFAULT = {"min": 0.10, "mid": 0.15, "max": 0.20}
 
 
 def saturating_effect(freq_per_week: float, half_sat: float) -> float:
