@@ -161,9 +161,7 @@ export function Dashboard() {
       console.error('Failed to load follower history:', err)
       setFollowerHistory(null)
     })
-    runForecast() // Initial forecast
-    // Auto-generate AI insights on first load
-    getAIRecommendations()
+    runForecast() // Initial forecast — AI insights on-demand to avoid initial delay
     // Load GWI research presets
     api.getPresets().then(res => {
       setAudiencePresets(res.presets)
@@ -216,7 +214,7 @@ export function Dashboard() {
   useEffect(() => {
     const timer = setTimeout(() => {
       runForecast()
-    }, 500)
+    }, 250)
     return () => clearTimeout(timer)
   }, [
     currentFollowers,
