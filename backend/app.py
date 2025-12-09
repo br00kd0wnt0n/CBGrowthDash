@@ -51,6 +51,24 @@ async def health():
     return StatusResponse(status="ok", version="1.0.0")
 
 
+@app.get("/api/debug/openai-status")
+async def openai_status():
+    """Debug endpoint to check OpenAI client status"""
+    import os
+    api_key = os.getenv("OPENAI_API_KEY")
+    key_present = api_key is not None and len(api_key) > 10
+    key_prefix = api_key[:10] + "..." if key_present else None
+
+    from services.ai_service import get_openai_client
+    client = get_openai_client()
+
+    return {
+        "key_present": key_present,
+        "key_prefix": key_prefix,
+        "client_initialized": client is not None
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
