@@ -667,9 +667,6 @@ export function Dashboard() {
     return dataPoint
   }) || []
 
-  const riskLevel = postsPerWeek > 35 ? 'HIGH' : postsPerWeek > 28 ? 'MEDIUM' : 'LOW'
-  const riskColor = riskLevel === 'HIGH' ? 'var(--bittersweet)' : riskLevel === 'MEDIUM' ? 'var(--texas-rose)' : 'var(--fountain-blue)'
-
   // Delta indicators: compare key metrics to previous values and show temporary delta pills
   const [delta, setDelta] = useState<{ projected?: number; cpf?: number; spend?: number } | null>(null)
   const [deltaKind, setDeltaKind] = useState<{ projected?: string; cpf?: string; spend?: string }>({})
@@ -1243,61 +1240,45 @@ export function Dashboard() {
             </div>
           </div>
 
-          <div className={`panel-section ai-section ${sidebarCollapsed.aiInsights ? 'is-collapsed' : ''}`}>
-            <div className="section-header clickable" onClick={() => toggleSidebarSection('aiInsights')}>
+          <div className="panel-section ai-section">
+            <div className="section-header">
               <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.aiInsights ? 'collapsed' : ''}`}>{sidebarCollapsed.aiInsights ? '+' : '−'}</span>
                 AI Advisor
               </div>
-              {sidebarCollapsed.aiInsights ? (
-                <div className="collapsed-summary">{aiInsights ? 'Ready' : 'Click to analyze'}</div>
-              ) : (
-                <HelpTooltip text="AI analyzes your complete configuration to recommend strategies for doubling followers within 12 months on a $100K budget" />
-              )}
+              <HelpTooltip text="AI analyzes your strategy against GWI research and client targets to provide optimization suggestions" />
             </div>
-            <div className={`section-content ${sidebarCollapsed.aiInsights ? 'collapsed' : ''}`}>
+            <div className="section-content">
               <div className="section-content-inner">
-                {aiLoading ? (
-                  <div className="ai-loading-container">
-                    <div className="ai-spinner" />
-                    <div className="ai-loading-text">Analyzing your strategy...</div>
-                    <div className="ai-loading-text" style={{fontSize:'0.75rem', opacity:0.7}}>Reviewing budgets, allocations, and growth targets</div>
-                  </div>
-                ) : aiInsights ? (
-                  <>
-                    <div className="ai-results">
-                      <div className="ai-analysis">{aiInsights.analysis}</div>
-                      <div className="ai-insights-list">
-                        {aiInsights.key_insights.map((insight, idx) => (
-                          <div key={idx} className="insight-item">{insight}</div>
-                        ))}
-                      </div>
+                <div className="ai-advisor-trigger">
+                  <p style={{fontSize:'0.75rem', color:'var(--text-secondary)', marginBottom:'0.75rem'}}>
+                    Get a comprehensive critique of your current strategy with actionable recommendations.
+                  </p>
+                  <button
+                    onClick={() => {
+                      // Scroll to critique module and trigger analysis
+                      const critiqueModule = document.querySelector('.strategy-critique-module');
+                      if (critiqueModule) {
+                        critiqueModule.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                      // Trigger the critique analysis
+                      getStrategyCritique();
+                    }}
+                    className="ai-button"
+                    disabled={critiqueLoading}
+                  >
+                    {critiqueLoading ? 'Analyzing...' : strategyCritique ? 'View Assessment' : 'Analyze Strategy'}
+                  </button>
+                  {strategyCritique && (
+                    <div style={{marginTop:'0.75rem', fontSize:'0.7rem', color:'var(--text-secondary)'}}>
+                      <span style={{color: strategyCritique.overall_assessment.rating === 'STRONG' ? '#22c55e' :
+                                          strategyCritique.overall_assessment.rating === 'GOOD' ? '#22c55e' :
+                                          strategyCritique.overall_assessment.rating === 'NEEDS_WORK' ? '#f59e0b' : '#ef4444'}}>
+                        ● {strategyCritique.overall_assessment.rating}
+                      </span>
+                      {' '} — Scroll down to view full assessment
                     </div>
-                    <div className="insight-card">
-                      <div className="insight-label">Oversaturation Risk</div>
-                      <div className="insight-value" style={{color: riskColor}}>
-                        {riskLevel}
-                      </div>
-                    </div>
-                    <button
-                      onClick={getAIRecommendations}
-                      className="ai-button"
-                      style={{marginTop:'0.5rem'}}
-                    >
-                      Re-analyze Strategy
-                    </button>
-                  </>
-                ) : (
-                  <div className="ai-loading-container" style={{padding:'1.5rem'}}>
-                    <div className="ai-loading-text">Click to analyze your configuration</div>
-                    <button
-                      onClick={getAIRecommendations}
-                      className="ai-button"
-                    >
-                      Analyze Strategy
-                    </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           </div>

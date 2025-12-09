@@ -358,15 +358,15 @@ def tune_parameters(req: ParamTuneRequest) -> Dict[str, Any]:
 
 
 def critique_strategy(
-    current_followers: Dict[str, int],
-    posts_per_week: int,
-    platform_allocation: Dict[str, int],
-    content_mix: Dict[str, Dict[str, int]],
+    current_followers: Dict[str, Any],
+    posts_per_week: float,
+    platform_allocation: Dict[str, Any],
+    content_mix: Dict[str, Dict[str, Any]],
     months: int,
     preset: str,
-    audience_mix: Dict[str, int],
-    projected_total: int,
-    goal: int,
+    audience_mix: Dict[str, Any],
+    projected_total: float,
+    goal: float,
     historical_data: Dict[str, Any],
     budget_info: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
@@ -562,11 +562,11 @@ Return ONLY valid JSON in this exact format:
 
 
 def generate_fallback_critique(
-    current_followers: Dict[str, int],
-    posts_per_week: int,
-    platform_allocation: Dict[str, int],
-    content_mix: Dict[str, Dict[str, int]],
-    audience_mix: Dict[str, int],
+    current_followers: Dict[str, Any],
+    posts_per_week: float,
+    platform_allocation: Dict[str, Any],
+    content_mix: Dict[str, Dict[str, Any]],
+    audience_mix: Dict[str, Any],
     progress_to_goal: float,
     preset: str
 ) -> Dict[str, Any]:

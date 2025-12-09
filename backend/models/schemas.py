@@ -170,15 +170,15 @@ class AIInsightsResponse(BaseModel):
 # AI Strategy Critique models
 class CritiqueRequest(BaseModel):
     """Request model for AI strategy critique"""
-    current_followers: Dict[str, int] = Field(description="Current follower counts per platform")
-    posts_per_week: int = Field(ge=1, le=100, description="Total posts per week")
-    platform_allocation: Dict[str, int] = Field(description="Platform allocation percentages")
-    content_mix: Dict[str, Dict[str, int]] = Field(description="Content mix by platform")
-    months: int = Field(ge=3, le=24, description="Forecast period in months")
+    current_followers: Dict[str, Any] = Field(description="Current follower counts per platform")
+    posts_per_week: float = Field(ge=1, le=100, description="Total posts per week")
+    platform_allocation: Dict[str, Any] = Field(description="Platform allocation percentages")
+    content_mix: Dict[str, Dict[str, Any]] = Field(description="Content mix by platform")
+    months: int = Field(ge=1, le=24, description="Forecast period in months")
     preset: str = Field(description="Strategy preset name")
-    audience_mix: Dict[str, int] = Field(description="Audience segment mix percentages")
-    projected_total: int = Field(description="Projected total followers")
-    goal: int = Field(description="Goal follower count")
+    audience_mix: Dict[str, Any] = Field(description="Audience segment mix percentages")
+    projected_total: float = Field(description="Projected total followers")
+    goal: float = Field(description="Goal follower count")
     # Optional fields
     paid_budget_week: Optional[float] = Field(default=0, description="Weekly paid budget")
     creator_budget_week: Optional[float] = Field(default=0, description="Weekly creator budget")
