@@ -311,16 +311,16 @@ export function Dashboard() {
   })
 
   const applyUserPresetConfig = (config: UserPresetConfig) => {
-    setCurrentFollowers(config.currentFollowers)
+    setCurrentFollowers(config.currentFollowers as typeof currentFollowers)
     setPostsPerWeek(config.postsPerWeek)
-    setPlatformAllocation(config.platformAllocation)
-    setContentMix(config.contentMix)
+    setPlatformAllocation(config.platformAllocation as typeof platformAllocation)
+    setContentMix(config.contentMix as typeof contentMix)
     setPreset(config.preset)
     setMonths(config.months)
     setEnablePaid(config.enablePaid)
     setPaidFunnelBudgetWeek(config.paidFunnelBudgetWeek)
     setPaidCPM(config.paidCPM)
-    setPaidAllocation(config.paidAllocation)
+    setPaidAllocation(config.paidAllocation as typeof paidAllocation)
     setEnableBudget(config.enableBudget)
     setPaidBudgetWeek(config.paidBudgetWeek)
     setCreatorBudgetWeek(config.creatorBudgetWeek)
@@ -329,7 +329,7 @@ export function Dashboard() {
     setCpfMid(config.cpfMid)
     setCpfMax(config.cpfMax)
     setValuePerFollower(config.valuePerFollower)
-    setAudienceMix(config.audienceMix)
+    setAudienceMix(config.audienceMix as typeof audienceMix)
     setSelectedPresetId(config.selectedPresetId)
   }
 
