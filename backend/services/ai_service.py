@@ -667,27 +667,53 @@ def generate_fallback_critique(
             "effort": "LOW"
         })
 
-    # Ensure we have at least 3 optimizations
-    if len(optimizations) < 3:
+    # Extract actual content mix values to avoid suggesting existing configurations
+    tiktok_short_video_pct = content_mix.get("TikTok", {}).get("Short Video", 0)
+    instagram_carousel_pct = content_mix.get("Instagram", {}).get("Carousel", 0)
+    instagram_reels_pct = content_mix.get("Instagram", {}).get("Reels", 0)
+    youtube_shorts_pct = content_mix.get("YouTube", {}).get("Shorts", 0)
+    facebook_video_pct = content_mix.get("Facebook", {}).get("Video", 0)
+
+    # Only add content mix suggestions if they're actually needed
+    if len(optimizations) < 3 and tiktok_short_video_pct < 85:
         optimizations.append({
             "priority": len(optimizations) + 1,
-            "action": "Increase Short Video content on TikTok to 90%+ of TikTok posts",
+            "action": f"Increase Short Video content on TikTok from {tiktok_short_video_pct:.0f}% to 90%+ of TikTok posts",
             "impact": "Maximizes platform-native content performance",
             "effort": "LOW"
         })
-    if len(optimizations) < 3:
+
+    if len(optimizations) < 3 and instagram_carousel_pct < 18:
         optimizations.append({
             "priority": len(optimizations) + 1,
-            "action": "Add Carousel content on Instagram (20-25% of IG posts) for higher engagement",
+            "action": f"Add Carousel content on Instagram (currently {instagram_carousel_pct:.0f}%, target 20-25% of IG posts) for higher engagement",
             "impact": "Carousels see 1.25x engagement multiplier on Instagram",
             "effort": "MEDIUM"
         })
+
+    if len(optimizations) < 3 and youtube_shorts_pct < 40:
+        optimizations.append({
+            "priority": len(optimizations) + 1,
+            "action": f"Increase YouTube Shorts content from {youtube_shorts_pct:.0f}% to 40%+ for better discovery",
+            "impact": "Shorts drive higher subscriber conversion on YouTube",
+            "effort": "MEDIUM"
+        })
+
+    # Generic fallbacks only if we still need more (strategy is already well-optimized)
     if len(optimizations) < 3:
         optimizations.append({
             "priority": len(optimizations) + 1,
             "action": "Maintain consistent posting schedule across all platforms",
             "impact": "Algorithm favorability and audience expectation management",
             "effort": "LOW"
+        })
+
+    if len(optimizations) < 3:
+        optimizations.append({
+            "priority": len(optimizations) + 1,
+            "action": "Current configuration is well-optimized - focus on content quality and engagement",
+            "impact": "Sustained growth through audience retention",
+            "effort": "MEDIUM"
         })
 
     return {
@@ -714,11 +740,11 @@ def generate_fallback_critique(
             },
             {
                 "category": "Content Mix",
-                "rating": "ACCEPTABLE",
-                "current_value": "Platform-specific content formats",
-                "assessment": "Content mix should emphasize Short Video on TikTok (90%+), Carousels on Instagram (20-25%)",
-                "suggestion": "Ensure TikTok is 90%+ Short Video, Instagram includes 20%+ Carousels",
-                "suggested_value": None
+                "rating": "OPTIMAL" if tiktok_short_video_pct >= 85 and instagram_carousel_pct >= 18 else "ACCEPTABLE" if tiktok_short_video_pct >= 70 else "NEEDS_ADJUSTMENT",
+                "current_value": f"TikTok Short Video: {tiktok_short_video_pct:.0f}%, Instagram Carousel: {instagram_carousel_pct:.0f}%, Instagram Reels: {instagram_reels_pct:.0f}%",
+                "assessment": f"{'Content mix is well-optimized with strong Short Video on TikTok and good Carousel usage on Instagram.' if tiktok_short_video_pct >= 85 and instagram_carousel_pct >= 18 else 'Content formats are reasonable but could be better optimized for platform strengths.'}",
+                "suggestion": None if tiktok_short_video_pct >= 85 and instagram_carousel_pct >= 18 else f"{'Increase TikTok Short Video to 90%+' if tiktok_short_video_pct < 85 else ''}{' and ' if tiktok_short_video_pct < 85 and instagram_carousel_pct < 18 else ''}{'Add more Instagram Carousels (target 20%+)' if instagram_carousel_pct < 18 else ''}".strip() or None,
+                "suggested_value": None if tiktok_short_video_pct >= 85 and instagram_carousel_pct >= 18 else f"TikTok Short Video: 90%, Instagram Carousel: 20%" if tiktok_short_video_pct < 85 or instagram_carousel_pct < 18 else None
             },
             {
                 "category": "Audience Alignment",
