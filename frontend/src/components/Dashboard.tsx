@@ -124,7 +124,7 @@ export function Dashboard() {
   const displayOverallRating = (r: string) => {
     const map: Record<string, string> = {
       'NEEDS_WORK': 'WAYS TO IMPROVE',
-      'AT_RISK': 'AT RISK',
+      'AT_RISK': 'OFF TRACK',
       'GOOD': 'GOOD',
       'STRONG': 'STRONG',
     }
@@ -138,8 +138,8 @@ export function Dashboard() {
       'ACCEPTABLE': 'Acceptable',
       'ON_TRACK': 'On Track',
       'ACHIEVABLE': 'Achievable',
-      'STRETCH': 'Stretch',
-      'UNLIKELY': 'Unlikely',
+      'STRETCH': 'Ambitious',
+      'UNLIKELY': 'Needs Rethink',
     }
     return map[r] || r.replace('_', ' ')
   }
