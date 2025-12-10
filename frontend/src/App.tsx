@@ -79,6 +79,15 @@ function App() {
               <ul>
                 <li>Mentions, sentiment, and tags are read from historical CSVs or live CSV URLs (if configured).</li>
               </ul>
+              <h3>AI Strategy Assessment</h3>
+              <ul>
+                <li>Objective: provide pragmatic, high‑impact guidance across posting cadence, platform allocation, content mix, and audience alignment.</li>
+                <li>Convergence‑friendly: small gaps within practical tolerances are treated as acceptable (±2% allocation, ±3% content mix). This prevents nitpicky churn.</li>
+                <li>No tail‑chasing: avoids reversing previous advice unless the estimated improvement exceeds ~1% of projected followers.</li>
+                <li>Estimated impact: suggested changes are simulated against the same forecast engine; the UI shows the expected % change vs. current configuration.</li>
+                <li>Healthy band bias: forecast favors quality over quantity. Posting within each platform’s healthy band improves per‑post effectiveness; oversaturation is gently penalized.</li>
+                <li>Structured changes: when available, “Apply Optimizations” uses precise recommended changes (posts/week, allocation, content mix) rather than parsing text.</li>
+              </ul>
             </div>
           </div>
         </div>
