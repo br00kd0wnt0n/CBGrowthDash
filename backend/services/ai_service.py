@@ -466,6 +466,9 @@ IMPORTANT RULES:
 - If a category is already optimal, set suggestion to null and acknowledge it's well-configured
 - Only suggest CHANGES that would actually improve the strategy
 - If suggesting a platform allocation change, ensure the suggestion is DIFFERENT from current values
+ - Respect practical TOLERANCES: treat platform allocation within ±2% of target and content mix within ±3% as ACCEPTABLE.
+ - Avoid oscillation: do not reverse a previous suggestion unless expected impact exceeds 1% improvement.
+ - Limit to top 2 high-impact optimizations.
 
 Assess these areas:
 1. POSTING FREQUENCY: Is the posts/week optimal? Consider engagement quality vs. reach.
@@ -545,7 +548,17 @@ Return ONLY valid JSON in this exact format:
     "gwi_alignment_notes": [
         "Specific note about how strategy aligns or misaligns with GWI research",
         "Another GWI-informed observation"
-    ]
+    ],
+    "recommended_changes": {
+        "posts_per_week": 28,                   // optional if above tolerance
+        "platform_allocation": {                // optional if above tolerance
+            "Instagram": 30, "TikTok": 33, "YouTube": 18, "Facebook": 19
+        },
+        "content_mix_by_platform": {            // optional if above tolerance
+            "Instagram": {"Short Video": 35, "Image": 25, "Carousel": 25, "Long Video": 5, "Story/Live": 10},
+            "TikTok": {"Short Video": 85, "Image": 0, "Carousel": 0, "Long Video": 5, "Story/Live": 10}
+        }
+    }
 }
 """
 

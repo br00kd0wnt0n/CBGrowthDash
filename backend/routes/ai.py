@@ -8,7 +8,8 @@ from models.schemas import (
     ParamTuneRequest, ParamTuneResponse, CritiqueRequest, CritiqueResponse
 )
 from services.ai_service import analyze_strategy, generate_gap_insight, tune_parameters, critique_strategy
-from services.forecast_service import load_historical_data
+from services.forecast_service import load_historical_data, forecast_growth, get_engagement_index_cached, PRESETS
+from pathlib import Path
 
 router = APIRouter(prefix="/api", tags=["AI Insights"])
 
@@ -124,6 +125,50 @@ async def ai_critique_strategy(req: CritiqueRequest):
             budget_info=budget_info,
             previous_suggestions=req.previous_suggestions
         )
+
+        # Post-process: estimate impact of recommended changes (if provided)
+        try:
+            if isinstance(result, dict) and result.get('recommended_changes'):
+                rec = result['recommended_changes'] or {}
+                # Build baseline and changed forecasts using the same engine as /forecast
+                data_dir = Path(__file__).parent.parent / "data"
+                eng_index = get_engagement_index_cached(data_dir)
+                preset_cfg = PRESETS.get(req.preset, {"campaign_lift": 0.0, "sensitivity": 0.5, "acq_scalar": 1.0})
+
+                def run_projection(posts_per_week: float, platform_allocation: dict, content_mix: dict) -> float:
+                    df = forecast_growth(
+                        current_followers=req.current_followers,
+                        posts_per_week_total=posts_per_week,
+                        platform_allocation=platform_allocation,
+                        content_mix_by_platform=content_mix,
+                        engagement_index_series=eng_index,
+                        months=req.months,
+                        campaign_lift=preset_cfg["campaign_lift"],
+                        sensitivity=preset_cfg["sensitivity"],
+                        acq_scalar=preset_cfg["acq_scalar"],
+                        paid_impressions_per_week_total=0.0,
+                        paid_allocation=None,
+                        paid_funnel=None,
+                        paid_budget_per_week_total=(req.paid_budget_week or 0.0),
+                        creator_budget_per_week_total=(req.creator_budget_week or 0.0),
+                        acquisition_budget_per_week_total=(req.acquisition_budget_week or 0.0),
+                    )
+                    return float(df.iloc[-1]["Total"]) if len(df) else 0.0
+
+                baseline_total = run_projection(req.posts_per_week, req.platform_allocation, req.content_mix)
+                changed_ppw = float(rec.get('posts_per_week') or req.posts_per_week)
+                changed_alloc = rec.get('platform_allocation') or req.platform_allocation
+                changed_mix = rec.get('content_mix_by_platform') or req.content_mix
+                changed_total = run_projection(changed_ppw, changed_alloc, changed_mix)
+                est = 0.0
+                if baseline_total > 0:
+                    est = (changed_total - baseline_total) / baseline_total * 100.0
+                result['estimated_impact'] = est
+                if abs(est) < 1.0:
+                    result['convergence_note'] = "Further tweaks yield <1% improvement; strategy appears converged. Focus on execution and cadence."
+        except Exception:
+            # Non-critical; ignore impact calculation failures
+            pass
 
         return CritiqueResponse(**result)
 

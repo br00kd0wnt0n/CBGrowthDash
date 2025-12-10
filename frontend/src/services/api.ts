@@ -195,6 +195,13 @@ export interface CritiqueResponse {
   category_assessments: CategoryAssessment[];
   top_optimizations: Optimization[];
   gwi_alignment_notes: string[];
+  recommended_changes?: {
+    posts_per_week?: number;
+    platform_allocation?: Record<string, number>;
+    content_mix_by_platform?: Record<string, Record<string, number>>;
+  };
+  estimated_impact?: number; // percent delta vs current projection
+  convergence_note?: string;
 }
 
 // User Preset types

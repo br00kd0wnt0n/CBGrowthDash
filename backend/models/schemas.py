@@ -228,3 +228,7 @@ class CritiqueResponse(BaseModel):
     category_assessments: List[CategoryAssessment]
     top_optimizations: List[Optimization]
     gwi_alignment_notes: List[str]
+    # Optional: structured changes and impact/convergence metadata
+    recommended_changes: Optional[Dict[str, Any]] = None
+    estimated_impact: Optional[float] = None  # percent change in projected_total vs current
+    convergence_note: Optional[str] = None

@@ -621,6 +621,41 @@ export function Dashboard() {
   const prepareApplyOptimizations = () => {
     if (!strategyCritique) return
     const changes: typeof applyPreview = {}
+    // Prefer structured recommended_changes when present
+    const rc = (strategyCritique as any).recommended_changes as {
+      posts_per_week?: number,
+      platform_allocation?: Record<string, number>,
+      content_mix_by_platform?: Record<string, Record<string, number>>,
+    } | undefined
+    if (rc) {
+      if (rc.posts_per_week && rc.posts_per_week !== postsPerWeek) {
+        changes.postsPerWeek = { from: postsPerWeek, to: rc.posts_per_week }
+      }
+      if (rc.platform_allocation) {
+        const alloc = normalizeAllocation(rc.platform_allocation)
+        const isDifferent = Object.keys(alloc).some(k => (alloc[k] || 0) !== (platformAllocation[k as keyof typeof platformAllocation] || 0))
+        if (isDifferent) changes.platformAllocation = { from: platformAllocation, to: alloc }
+      }
+      // If only content mix changes are present, apply them directly
+      if (!changes.postsPerWeek && !changes.platformAllocation && rc.content_mix_by_platform) {
+        const cm: any = {}
+        Object.keys(rc.content_mix_by_platform).forEach(p => {
+          const m = rc.content_mix_by_platform![p]
+          const sum = Object.values(m).reduce((s,v)=> s + Math.max(0, v as number), 0) || 1
+          const scaled: any = {}
+          Object.keys(m).forEach(k => { scaled[k] = Math.round((Math.max(0, (m as any)[k]) / sum) * 100) })
+          cm[p] = scaled
+        })
+        setContentMix((prev:any) => ({ ...prev, ...cm }))
+        return
+      }
+      if (changes.postsPerWeek || changes.platformAllocation) {
+        setApplyPreview(changes)
+        setShowApplyConfirm(true)
+        return
+      }
+      // Fall through to string-based parsing when nothing else to apply
+    }
     // Find posting frequency and platform allocation suggestions
     for (const cat of strategyCritique.category_assessments) {
       const name = cat.category.toLowerCase()
@@ -2033,6 +2068,16 @@ export function Dashboard() {
                 }
                 return null
               })()}
+              {strategyCritique?.estimated_impact !== undefined && (
+                <div className="ai-note" style={{ marginLeft: '8px' }}>
+                  Estimated impact: {Math.abs(strategyCritique.estimated_impact).toFixed(1)}% {strategyCritique.estimated_impact >= 0 ? '↑' : '↓'}{Math.abs(strategyCritique.estimated_impact) < 1 ? ' • Low impact (converged)' : ''}
+                </div>
+              )}
+              {strategyCritique?.convergence_note && (
+                <div className="ai-note" style={{ marginLeft: '8px' }}>
+                  {strategyCritique.convergence_note}
+                </div>
+              )}
             </div>
 
             {critiqueError && (
