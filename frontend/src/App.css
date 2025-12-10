@@ -33,10 +33,7 @@
 .header-title h1 {
   font-size: 1.25rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--fountain-blue), var(--froly));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--froly);
   margin: 0;
 }
 
@@ -44,14 +41,18 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-left: 10px;
-  padding: 0.15rem 0.45rem;
-  font-size: 0.65rem;
-  font-weight: 800;
-  color: white;
-  background: linear-gradient(135deg, var(--texas-rose), var(--bittersweet));
-  border-radius: 6px;
-  letter-spacing: 0.04em;
+  margin-left: 8px;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  -webkit-text-fill-color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.8;
 }
 
 .period {
@@ -119,10 +120,7 @@
 h1 {
   font-size: 2.5rem;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--fountain-blue) 0%, var(--froly) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--fountain-blue);
   margin-bottom: 0.5rem;
 }
 
@@ -383,10 +381,7 @@ h1 {
 .metric-value {
   font-size: 2.5rem;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--fountain-blue), var(--froly));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--fountain-blue);
   margin-bottom: 0.5rem;
 }
 

@@ -931,30 +931,23 @@ export function Dashboard() {
         <div className="kpi-separator"></div>
         <div className="kpi-section projected">
           <div className="kpi-label">PROJECTED</div>
-          <div className="kpi-value">{(projectedTotal / 1000000).toFixed(2)}M</div>
-          {delta?.projected !== undefined && (
-            <div className={`delta-pill ${deltaKind.projected}`}>{delta.projected>0?'+':''}{(delta.projected/1000).toFixed(0)}k</div>
-          )}
-          <div className="progress-badge" style={{
-            background: progressPercent >= 95 ? 'var(--fountain-blue)' : progressPercent >= 80 ? 'var(--texas-rose)' : 'var(--bittersweet)'
-          }}>
-            {progressPercent.toFixed(0)}%
+          <div className="kpi-value-row">
+            <div className="kpi-value">{(projectedTotal / 1000000).toFixed(2)}M</div>
+            <div className="progress-badge" style={{
+              background: progressPercent >= 95 ? 'var(--fountain-blue)' : progressPercent >= 80 ? 'var(--texas-rose)' : 'var(--froly)'
+            }}>
+              {progressPercent.toFixed(0)}%
+            </div>
           </div>
         </div>
         <div className="kpi-separator"></div>
         <div className="kpi-section">
           <div className="kpi-label">EST. ROI</div>
           <div className="kpi-value">{estROI !== null ? `${estROI.toFixed(0)}%` : '—'}</div>
-          {delta?.cpf !== undefined && (
-            <div className={`delta-pill ${deltaKind.cpf}`}>{delta.cpf>0?'+':'-'}${Math.abs(delta.cpf).toFixed(2)}</div>
-          )}
         </div>
         <div className="kpi-section">
           <div className="kpi-label">TOTAL SPEND</div>
           <div className="kpi-value">{(monthlySpend/1000).toFixed(1)}k / {annualDisplay}</div>
-          {delta?.spend !== undefined && (
-            <div className={`delta-pill ${deltaKind.spend}`}>{delta.spend>0?'+':'-'}${(Math.abs(delta.spend)/1000).toFixed(1)}k</div>
-          )}
         </div>
       </div>
 
@@ -1030,7 +1023,7 @@ export function Dashboard() {
       <div className="dashboard-grid">
         {/* Left Panel: Controls */}
         <div className="control-panel">
-          <div className={`panel-section ${sidebarCollapsed.followers ? 'is-collapsed' : ''}`}>
+          <div className={`panel-section followers-section ${sidebarCollapsed.followers ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('followers')}>
               <div className="section-title-group">
                 <span className={`collapse-icon ${sidebarCollapsed.followers ? 'collapsed' : ''}`}>{sidebarCollapsed.followers ? '▸' : '▾'}</span>
@@ -1068,7 +1061,7 @@ export function Dashboard() {
               {sidebarCollapsed.strategy ? (
                 <div className="collapsed-summary">{postsPerWeek} posts/wk • {months}mo</div>
               ) : (
-                <HelpTooltip text="Adjust posting frequency, timeline, and strategy approach to test different growth scenarios" />
+                <HelpTooltip text="Set posting frequency, forecast period, and audience preset to model different growth scenarios" />
               )}
             </div>
             <div className={`section-content ${sidebarCollapsed.strategy ? 'collapsed' : ''}`}>
@@ -1141,7 +1134,7 @@ export function Dashboard() {
           </div>
 
           {/* Audience Composition Mixer */}
-          <div className={`panel-section ${sidebarCollapsed.audienceMix ? 'is-collapsed' : ''}`}>
+          <div className={`panel-section audience-section ${sidebarCollapsed.audienceMix ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('audienceMix')}>
               <div className="section-title-group">
                 <span className={`collapse-icon ${sidebarCollapsed.audienceMix ? 'collapsed' : ''}`}>{sidebarCollapsed.audienceMix ? '▸' : '▾'}</span>
@@ -1358,7 +1351,7 @@ export function Dashboard() {
               {sidebarCollapsed.budget ? (
                 <div className="collapsed-summary">{enableBudget ? `$${paidBudgetWeek + creatorBudgetWeek + acquisitionBudgetWeek}/wk` : 'Off'}</div>
               ) : (
-                <HelpTooltip text="Budget-based predictive modeling using cost-per-follower (CPF) ranges. Defaults to $3–$5 across paid, creator, acquisition." />
+                <HelpTooltip text="Budget-based predictive modeling using cost-per-follower (CPF) ranges. Defaults to $0.10–$0.20 across paid, creator, acquisition." />
               )}
             </div>
             <div className={`section-content ${sidebarCollapsed.budget ? 'collapsed' : ''}`}>
@@ -1409,7 +1402,7 @@ export function Dashboard() {
             </div>
           </div>
 
-          <div className={`panel-section ${sidebarCollapsed.contentMix ? 'is-collapsed' : ''}`}>
+          <div className={`panel-section content-section ${sidebarCollapsed.contentMix ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('contentMix')}>
               <div className="section-title-group">
                 <span className={`collapse-icon ${sidebarCollapsed.contentMix ? 'collapsed' : ''}`}>{sidebarCollapsed.contentMix ? '▸' : '▾'}</span>
@@ -1527,25 +1520,6 @@ export function Dashboard() {
 
         {/* Right Panel: Visualizations */}
         <div className="viz-panel">
-          {/* At-a-glance KPIs */}
-          <div className="metrics-row" style={{gridTemplateColumns:'repeat(3, 1fr)'}}>
-            <div className="metric-card">
-              <div className="metric-label">Current Reach</div>
-              <div className="metric-value">{(totalFollowers / 1000000).toFixed(2)}M</div>
-              <div className="metric-subtitle">Across 4 platforms</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-label">Weekly Posts</div>
-              <div className="metric-value">{postsPerWeek}</div>
-              <div className="metric-subtitle">{(postsPerWeek * 4.33).toFixed(0)} per month</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-label">Growth Target</div>
-              <div className="metric-value">+{((goalFollowers - totalFollowers) / 1000000).toFixed(2)}M</div>
-              <div className="metric-subtitle">100% increase</div>
-            </div>
-            
-          </div>
 
           {/* Historical context first */}
           {historicalData && (
