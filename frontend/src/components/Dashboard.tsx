@@ -1907,9 +1907,8 @@ export function Dashboard() {
 
           {/* Acquisition Breakdown */}
           {forecastResults?.added_breakdown && (() => {
-            const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-            const startMonth = new Date().getMonth()
-            const startYear = new Date().getFullYear() + 1
+            // Use the same fixed forecast month labels as the main chart to ensure 2026 labels
+            const labels = ['Jan 2026', 'Feb 2026', 'Mar 2026', 'Apr 2026', 'May 2026', 'Jun 2026', 'Jul 2026', 'Aug 2026', 'Sep 2026', 'Oct 2026', 'Nov 2026', 'Dec 2026']
 
             const totalOrganic = forecastResults.added_breakdown.reduce((sum, b) => sum + (b.organic_added || 0), 0)
             const totalPaid = forecastResults.added_breakdown.reduce((sum, b) => sum + (b.paid_added || 0), 0)
@@ -1929,11 +1928,9 @@ export function Dashboard() {
               const addTT = Math.max(0, m.TikTok - (prev as any).TikTok)
               const addYT = Math.max(0, m.YouTube - (prev as any).YouTube)
               const addFB = Math.max(0, m.Facebook - (prev as any).Facebook)
-              const monthIdx = (startMonth + idx) % 12
-              const yearOffset = Math.floor((startMonth + idx) / 12)
-              const year = startYear + yearOffset
+              const label = labels[idx] || `M${idx+1}`
               return {
-                label: `${MONTH_NAMES[monthIdx]} ${year}`,
+                label,
                 Instagram: addIG,
                 TikTok: addTT,
                 YouTube: addYT,
@@ -1965,9 +1962,10 @@ export function Dashboard() {
                   {forecastResults.added_breakdown.map((breakdown, idx) => {
                     const monthTotal = (breakdown.organic_added || 0) + (breakdown.paid_added || 0)
                     const monthPaidPct = monthTotal > 0 ? ((breakdown.paid_added || 0) / monthTotal) * 100 : 0
-                    const monthIdx = (startMonth + idx) % 12
-                    const yearOffset = Math.floor((startMonth + idx) / 12)
-                    const year = startYear + yearOffset
+                    const label = labels[idx] || `M${idx+1}`
+                    const parts = label.split(' ')
+                    const mon = parts[0] || label
+                    const year = parts[1] || ''
                     return (
                       <div key={idx} style={{
                         flex: '1 1 0',
@@ -1978,7 +1976,7 @@ export function Dashboard() {
                         border: '1px solid var(--border)',
                         textAlign: 'center'
                       }}>
-                        <div style={{fontSize:'0.65rem', fontWeight:700, color:'var(--text-secondary)', marginBottom:'2px'}}>{MONTH_NAMES[monthIdx]}</div>
+                        <div style={{fontSize:'0.65rem', fontWeight:700, color:'var(--text-secondary)', marginBottom:'2px'}}>{mon}</div>
                         <div style={{fontSize:'0.55rem', color:'var(--text-secondary)', marginBottom:'3px'}}>{year}</div>
                         <div style={{fontSize:'0.85rem', fontWeight:800, color:'var(--fountain-blue)'}}>{(monthTotal/1000).toFixed(0)}K</div>
                         <div style={{height:'4px', background:'var(--bg-secondary)', borderRadius:'2px', overflow:'hidden', margin:'3px 0'}}>
