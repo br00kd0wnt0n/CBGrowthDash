@@ -19,7 +19,7 @@ function App() {
         <div className="header-left">
           <img src="/CB_logo_FINAL_FullColor.png" alt="Care Bears" className="logo-small" />
           <div className="header-title">
-            <h1>Growth Forecast Dashboard</h1>
+            <h1>Growth Forecast Dashboard <span className="beta-badge">BETA</span></h1>
           </div>
         </div>
         <div className="header-right">
