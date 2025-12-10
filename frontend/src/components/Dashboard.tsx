@@ -1963,9 +1963,18 @@ export function Dashboard() {
                       <thead>
                         <tr>
                           <th style={{textAlign:'left', padding:'6px', borderBottom:'1px solid var(--border)'}}>Month</th>
-                          {['Instagram','TikTok','YouTube','Facebook'].map(p => (
-                            <th key={p} style={{textAlign:'right', padding:'6px', borderBottom:'1px solid var(--border)'}}>{p}</th>
-                          ))}
+                          {['Instagram','TikTok','YouTube','Facebook'].map(p => {
+                            const color = p === 'Instagram' ? SERIES_COLORS.instagram
+                              : p === 'TikTok' ? SERIES_COLORS.tiktok
+                              : p === 'YouTube' ? SERIES_COLORS.youtube
+                              : SERIES_COLORS.facebook
+                            return (
+                              <th key={p} style={{textAlign:'right', padding:'6px', borderBottom:'1px solid var(--border)'}}>
+                                <span aria-hidden="true" style={{display:'inline-block', width:'10px', height:'10px', borderRadius:'50%', background: color, marginRight:'6px', verticalAlign:'middle'}} />
+                                {p}
+                              </th>
+                            )
+                          })}
                           <th style={{textAlign:'right', padding:'6px', borderBottom:'1px solid var(--border)'}}>Total</th>
                         </tr>
                       </thead>
@@ -1987,64 +1996,6 @@ export function Dashboard() {
                     </table>
                   </div>
                 )}
-              </div>
-            )
-          })()}
-        
-            const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-            const startMonth = new Date().getMonth() // 0-indexed, current month
-            const startYear = new Date().getFullYear() + 1 // Next year (2026)
-
-            // Calculate totals for summary
-            const totalOrganic = forecastResults.added_breakdown.reduce((sum, b) => sum + (b.organic_added || 0), 0)
-            const totalPaid = forecastResults.added_breakdown.reduce((sum, b) => sum + (b.paid_added || 0), 0)
-            const grandTotal = totalOrganic + totalPaid
-            const totalPaidPct = grandTotal > 0 ? (totalPaid / grandTotal) * 100 : 0
-            const totalOrgPct = 100 - totalPaidPct
-
-            return (
-              <div className="chart-container">
-                <div className="chart-header" style={{marginBottom:'0.75rem'}}>
-                  <h2 style={{margin:0}}>Forecasted Acquisition Breakdown</h2>
-                  <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-                    <div style={{fontSize:'0.8rem', color:'var(--text-secondary)'}}>
-                      <span style={{fontWeight:700, color:'var(--fountain-blue)'}}>{totalOrgPct.toFixed(0)}%</span> Organic
-                    </div>
-                    <div style={{width:'80px', height:'8px', background:'var(--bg-secondary)', borderRadius:'4px', overflow:'hidden', border:'1px solid var(--border)'}}>
-                      <div style={{width:`${totalPaidPct}%`, height:'100%', background:'var(--primary)'}}></div>
-                    </div>
-                    <div style={{fontSize:'0.8rem', color:'var(--text-secondary)'}}>
-                      <span style={{fontWeight:700, color:'var(--primary)'}}>{totalPaidPct.toFixed(0)}%</span> Paid
-                    </div>
-                  </div>
-                </div>
-                <div style={{display:'flex', gap:'6px', overflowX:'auto', paddingBottom:'4px'}}>
-                  {forecastResults.added_breakdown.map((breakdown, idx) => {
-                    const monthTotal = (breakdown.organic_added || 0) + (breakdown.paid_added || 0)
-                    const monthPaidPct = monthTotal > 0 ? ((breakdown.paid_added || 0) / monthTotal) * 100 : 0
-                    const monthIdx = (startMonth + idx) % 12
-                    const yearOffset = Math.floor((startMonth + idx) / 12)
-                    const year = startYear + yearOffset
-                    return (
-                      <div key={idx} style={{
-                        flex: '1 1 0',
-                        minWidth: '58px',
-                        background: 'var(--bg-primary)',
-                        borderRadius: '8px',
-                        padding: '6px 4px',
-                        border: '1px solid var(--border)',
-                        textAlign: 'center'
-                      }}>
-                        <div style={{fontSize:'0.65rem', fontWeight:700, color:'var(--text-secondary)', marginBottom:'2px'}}>{MONTH_NAMES[monthIdx]}</div>
-                        <div style={{fontSize:'0.55rem', color:'var(--text-secondary)', marginBottom:'3px'}}>{year}</div>
-                        <div style={{fontSize:'0.85rem', fontWeight:800, color:'var(--fountain-blue)'}}>{(monthTotal/1000).toFixed(0)}K</div>
-                        <div style={{height:'4px', background:'var(--bg-secondary)', borderRadius:'2px', overflow:'hidden', margin:'3px 0'}}>
-                          <div style={{width:`${monthPaidPct}%`, height:'100%', background:'var(--primary)'}}></div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
               </div>
             )
           })()}
