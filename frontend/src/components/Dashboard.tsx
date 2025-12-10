@@ -118,6 +118,7 @@ export function Dashboard() {
   const [audiencePresets, setAudiencePresets] = useState<AudiencePreset[]>([])
   const [selectedPresetId, setSelectedPresetId] = useState<string>('emerging_platforms')
   const [audienceMix, setAudienceMix] = useState({ parents: 80, gifters: 10, collectors: 10 })
+  const [acqExpanded, setAcqExpanded] = useState(false)
   const [recommendedAllocation, setRecommendedAllocation] = useState<AllocationRecommendation | null>(null)
   const [presetModified, setPresetModified] = useState(false)
 
@@ -1873,6 +1874,123 @@ export function Dashboard() {
 
           {/* Acquisition Breakdown */}
           {forecastResults?.added_breakdown && (() => {
+            const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            const startMonth = new Date().getMonth()
+            const startYear = new Date().getFullYear() + 1
+
+            const totalOrganic = forecastResults.added_breakdown.reduce((sum, b) => sum + (b.organic_added || 0), 0)
+            const totalPaid = forecastResults.added_breakdown.reduce((sum, b) => sum + (b.paid_added || 0), 0)
+            const grandTotal = totalOrganic + totalPaid
+            const totalPaidPct = grandTotal > 0 ? (totalPaid / grandTotal) * 100 : 0
+            const totalOrgPct = 100 - totalPaidPct
+
+            // Compute per-platform monthly adds by differencing cumulative series
+            const perPlatformAdds = (forecastResults.monthly_data || []).map((m, idx) => {
+              const prev = idx === 0 ? currentFollowers : {
+                Instagram: forecastResults.monthly_data[idx - 1].Instagram,
+                TikTok: forecastResults.monthly_data[idx - 1].TikTok,
+                YouTube: forecastResults.monthly_data[idx - 1].YouTube,
+                Facebook: forecastResults.monthly_data[idx - 1].Facebook,
+              }
+              const addIG = Math.max(0, m.Instagram - (prev as any).Instagram)
+              const addTT = Math.max(0, m.TikTok - (prev as any).TikTok)
+              const addYT = Math.max(0, m.YouTube - (prev as any).YouTube)
+              const addFB = Math.max(0, m.Facebook - (prev as any).Facebook)
+              const monthIdx = (startMonth + idx) % 12
+              const yearOffset = Math.floor((startMonth + idx) / 12)
+              const year = startYear + yearOffset
+              return {
+                label: `${MONTH_NAMES[monthIdx]} ${year}`,
+                Instagram: addIG,
+                TikTok: addTT,
+                YouTube: addYT,
+                Facebook: addFB,
+              }
+            })
+
+            return (
+              <div className="chart-container">
+                <div className="chart-header" style={{marginBottom:'0.75rem'}}>
+                  <h2 style={{margin:0}}>Forecasted Acquisition Breakdown</h2>
+                  <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                    <div style={{fontSize:'0.8rem', color:'var(--text-secondary)'}}>
+                      <span style={{fontWeight:700, color:'var(--fountain-blue)'}}>{totalOrgPct.toFixed(0)}%</span> Organic
+                    </div>
+                    <div style={{width:'80px', height:'8px', background:'var(--bg-secondary)', borderRadius:'4px', overflow:'hidden', border:'1px solid var(--border)'}}>
+                      <div style={{width:`${totalPaidPct}%`, height:'100%', background:'var(--primary)'}}></div>
+                    </div>
+                    <div style={{fontSize:'0.8rem', color:'var(--text-secondary)'}}>
+                      <span style={{fontWeight:700, color:'var(--primary)'}}>{totalPaidPct.toFixed(0)}%</span> Paid
+                    </div>
+                    <button className="ai-button critique-trigger-btn" onClick={()=> setAcqExpanded(v=>!v)} style={{marginLeft:'8px'}}>
+                      {acqExpanded ? 'Collapse' : 'Expand'}
+                    </button>
+                  </div>
+                </div>
+                {/* Collapsed: Month-by-month total mix barlets */}
+                <div style={{display:'flex', gap:'6px', overflowX:'auto', paddingBottom:'4px'}}>
+                  {forecastResults.added_breakdown.map((breakdown, idx) => {
+                    const monthTotal = (breakdown.organic_added || 0) + (breakdown.paid_added || 0)
+                    const monthPaidPct = monthTotal > 0 ? ((breakdown.paid_added || 0) / monthTotal) * 100 : 0
+                    const monthIdx = (startMonth + idx) % 12
+                    const yearOffset = Math.floor((startMonth + idx) / 12)
+                    const year = startYear + yearOffset
+                    return (
+                      <div key={idx} style={{
+                        flex: '1 1 0',
+                        minWidth: '58px',
+                        background: 'var(--bg-primary)',
+                        borderRadius: '8px',
+                        padding: '6px 4px',
+                        border: '1px solid var(--border)',
+                        textAlign: 'center'
+                      }}>
+                        <div style={{fontSize:'0.65rem', fontWeight:700, color:'var(--text-secondary)', marginBottom:'2px'}}>{MONTH_NAMES[monthIdx]}</div>
+                        <div style={{fontSize:'0.55rem', color:'var(--text-secondary)', marginBottom:'3px'}}>{year}</div>
+                        <div style={{fontSize:'0.85rem', fontWeight:800, color:'var(--fountain-blue)'}}>{(monthTotal/1000).toFixed(0)}K</div>
+                        <div style={{height:'4px', background:'var(--bg-secondary)', borderRadius:'2px', overflow:'hidden', margin:'3px 0'}}>
+                          <div style={{width:`${monthPaidPct}%`, height:'100%', background:'var(--primary)'}}></div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Expanded: Per-platform per-month table */}
+                {acqExpanded && (
+                  <div style={{marginTop:'12px', overflowX:'auto'}}>
+                    <table style={{width:'100%', borderCollapse:'collapse'}}>
+                      <thead>
+                        <tr>
+                          <th style={{textAlign:'left', padding:'6px', borderBottom:'1px solid var(--border)'}}>Month</th>
+                          {['Instagram','TikTok','YouTube','Facebook'].map(p => (
+                            <th key={p} style={{textAlign:'right', padding:'6px', borderBottom:'1px solid var(--border)'}}>{p}</th>
+                          ))}
+                          <th style={{textAlign:'right', padding:'6px', borderBottom:'1px solid var(--border)'}}>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {perPlatformAdds.map((row, idx) => {
+                          const total = row.Instagram + row.TikTok + row.YouTube + row.Facebook
+                          return (
+                            <tr key={idx}>
+                              <td style={{padding:'6px', borderBottom:'1px solid var(--border)'}}>{row.label}</td>
+                              <td style={{padding:'6px', textAlign:'right', borderBottom:'1px solid var(--border)'}}>{(row.Instagram/1000).toFixed(1)}k</td>
+                              <td style={{padding:'6px', textAlign:'right', borderBottom:'1px solid var(--border)'}}>{(row.TikTok/1000).toFixed(1)}k</td>
+                              <td style={{padding:'6px', textAlign:'right', borderBottom:'1px solid var(--border)'}}>{(row.YouTube/1000).toFixed(1)}k</td>
+                              <td style={{padding:'6px', textAlign:'right', borderBottom:'1px solid var(--border)'}}>{(row.Facebook/1000).toFixed(1)}k</td>
+                              <td style={{padding:'6px', textAlign:'right', borderBottom:'1px solid var(--border)'}}>{(total/1000).toFixed(1)}k</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+        
             const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
             const startMonth = new Date().getMonth() // 0-indexed, current month
             const startYear = new Date().getFullYear() + 1 // Next year (2026)
