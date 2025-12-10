@@ -1881,6 +1881,12 @@
   margin-bottom: 1rem;
 }
 
+.critique-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
 .critique-header .section-header {
   margin: 0;
 }

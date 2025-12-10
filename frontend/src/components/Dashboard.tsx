@@ -119,6 +119,30 @@ export function Dashboard() {
   const [selectedPresetId, setSelectedPresetId] = useState<string>('emerging_platforms')
   const [audienceMix, setAudienceMix] = useState({ parents: 80, gifters: 10, collectors: 10 })
   const [acqExpanded, setAcqExpanded] = useState(false)
+
+  // Friendly label mapping for AI ratings
+  const displayOverallRating = (r: string) => {
+    const map: Record<string, string> = {
+      'NEEDS_WORK': 'WAYS TO IMPROVE',
+      'AT_RISK': 'AT RISK',
+      'GOOD': 'GOOD',
+      'STRONG': 'STRONG',
+    }
+    return map[r] || r.replace('_', ' ')
+  }
+
+  const displayCategoryRating = (r: string) => {
+    const map: Record<string, string> = {
+      'NEEDS_ADJUSTMENT': 'Optimizable',
+      'OPTIMAL': 'Optimal',
+      'ACCEPTABLE': 'Acceptable',
+      'ON_TRACK': 'On Track',
+      'ACHIEVABLE': 'Achievable',
+      'STRETCH': 'Stretch',
+      'UNLIKELY': 'Unlikely',
+    }
+    return map[r] || r.replace('_', ' ')
+  }
   const [recommendedAllocation, setRecommendedAllocation] = useState<AllocationRecommendation | null>(null)
   const [presetModified, setPresetModified] = useState(false)
 
@@ -2039,22 +2063,23 @@ export function Dashboard() {
           <div className="strategy-critique-module">
             <div className="critique-header">
               <h3 className="section-header">AI Strategy Assessment</h3>
-              <button
-                className="ai-button critique-trigger-btn"
-                onClick={getStrategyCritique}
-                disabled={critiqueLoading}
-              >
-                {critiqueLoading ? 'Analyzing...' : strategyCritique ? 'Re-Analyze Strategy' : 'Analyze My Strategy'}
-              </button>
-              <button
-                className="ai-button critique-trigger-btn"
-                style={{ marginLeft: '8px' }}
-                onClick={prepareApplyOptimizations}
-                disabled={!strategyCritique}
-                title="Apply suggested posts/week and platform allocation from AI assessment"
-              >
-                Apply Optimizations
-              </button>
+              <div className="critique-actions">
+                <button
+                  className="ai-button critique-trigger-btn"
+                  onClick={getStrategyCritique}
+                  disabled={critiqueLoading}
+                >
+                  {critiqueLoading ? 'Analyzing...' : strategyCritique ? 'Re-Analyze Strategy' : 'Analyze My Strategy'}
+                </button>
+                <button
+                  className="ai-button critique-trigger-btn"
+                  onClick={prepareApplyOptimizations}
+                  disabled={!strategyCritique}
+                  title="Apply suggested posts/week and platform allocation from AI assessment"
+                >
+                  Apply Optimizations
+                </button>
+              </div>
               {(() => {
                 if (!strategyCritique) return null
                 const posting = strategyCritique.category_assessments.find(c => c.category.toLowerCase().includes('posting'))
@@ -2097,12 +2122,12 @@ export function Dashboard() {
               <div className="critique-results">
                 {/* Overall Assessment + GWI Notes - Side by Side */}
                 <div className="assessment-gwi-row">
-                  <div className={`overall-assessment rating-${strategyCritique.overall_assessment.rating.toLowerCase().replace('_', '-')}`}>
-                    <div className="assessment-badge">
-                      {strategyCritique.overall_assessment.rating.replace('_', ' ')}
-                    </div>
-                    <p className="assessment-summary">{strategyCritique.overall_assessment.summary}</p>
+                <div className={`overall-assessment rating-${strategyCritique.overall_assessment.rating.toLowerCase().replace('_', '-')}`}>
+                  <div className="assessment-badge">
+                    {displayOverallRating(strategyCritique.overall_assessment.rating)}
                   </div>
+                  <p className="assessment-summary">{strategyCritique.overall_assessment.summary}</p>
+                </div>
 
                   {strategyCritique.gwi_alignment_notes.length > 0 && (
                     <div className="gwi-notes">
@@ -2124,7 +2149,7 @@ export function Dashboard() {
                       <div className="category-header">
                         <span className="category-name">{cat.category}</span>
                         <span className={`category-rating rating-badge-${cat.rating.toLowerCase().replace('_', '-')}`}>
-                          {cat.rating.replace('_', ' ')}
+                          {displayCategoryRating(cat.rating)}
                         </span>
                       </div>
                       <div className="category-current">
