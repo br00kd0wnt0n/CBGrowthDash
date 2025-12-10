@@ -1941,7 +1941,7 @@ export function Dashboard() {
             return (
               <div className="chart-container">
                 <div className="chart-header" style={{marginBottom:'0.75rem'}}>
-                  <h2 style={{margin:0}}>Forecasted Acquisition Breakdown</h2>
+                  <h2 style={{margin:0}}>Forecasted Acquisition Breakdown (2026)</h2>
                   <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
                     <div style={{fontSize:'0.8rem', color:'var(--text-secondary)'}}>
                       <span style={{fontWeight:700, color:'var(--fountain-blue)'}}>{totalOrgPct.toFixed(0)}%</span> Organic
