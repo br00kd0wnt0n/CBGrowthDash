@@ -1951,6 +1951,19 @@ export function Dashboard() {
               >
                 Apply Optimizations
               </button>
+              {(() => {
+                if (!strategyCritique) return null
+                const posting = strategyCritique.category_assessments.find(c => c.category.toLowerCase().includes('posting'))
+                const suggested = posting ? parsePostsPerWeek(posting.suggested_value || '') : null
+                if (suggested !== null && suggested < postsPerWeek) {
+                  return (
+                    <div className="ai-note" style={{ marginLeft: '8px' }}>
+                      Reasonableness: Shifting into the healthy posting band can improve per‑post effectiveness and reduce oversaturation penalties. Projections reflect quality over quantity.
+                    </div>
+                  )
+                }
+                return null
+              })()}
             </div>
 
             {critiqueError && (
