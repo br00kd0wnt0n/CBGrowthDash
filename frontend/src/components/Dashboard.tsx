@@ -1009,7 +1009,7 @@ export function Dashboard() {
           <div className={`panel-section ${sidebarCollapsed.followers ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('followers')}>
               <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.followers ? 'collapsed' : ''}`}>{sidebarCollapsed.followers ? '+' : '−'}</span>
+                <span className={`collapse-icon ${sidebarCollapsed.followers ? 'collapsed' : ''}`}>{sidebarCollapsed.followers ? '▸' : '▾'}</span>
                 Current Followers
               </div>
               {sidebarCollapsed.followers ? (
@@ -1038,7 +1038,7 @@ export function Dashboard() {
           <div className={`panel-section strategy-section ${sidebarCollapsed.strategy ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('strategy')}>
               <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.strategy ? 'collapsed' : ''}`}>{sidebarCollapsed.strategy ? '+' : '−'}</span>
+                <span className={`collapse-icon ${sidebarCollapsed.strategy ? 'collapsed' : ''}`}>{sidebarCollapsed.strategy ? '▸' : '▾'}</span>
                 Controls
               </div>
               {sidebarCollapsed.strategy ? (
@@ -1120,7 +1120,7 @@ export function Dashboard() {
           <div className={`panel-section ${sidebarCollapsed.audienceMix ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('audienceMix')}>
               <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.audienceMix ? 'collapsed' : ''}`}>{sidebarCollapsed.audienceMix ? '+' : '−'}</span>
+                <span className={`collapse-icon ${sidebarCollapsed.audienceMix ? 'collapsed' : ''}`}>{sidebarCollapsed.audienceMix ? '▸' : '▾'}</span>
                 Audience Mix
               </div>
               {sidebarCollapsed.audienceMix ? (
@@ -1239,7 +1239,7 @@ export function Dashboard() {
           <div className={`panel-section paid-section ${sidebarCollapsed.paidMedia ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('paidMedia')}>
               <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.paidMedia ? 'collapsed' : ''}`}>{sidebarCollapsed.paidMedia ? '+' : '−'}</span>
+                <span className={`collapse-icon ${sidebarCollapsed.paidMedia ? 'collapsed' : ''}`}>{sidebarCollapsed.paidMedia ? '▸' : '▾'}</span>
                 Paid Media
               </div>
               {sidebarCollapsed.paidMedia ? (
@@ -1328,7 +1328,7 @@ export function Dashboard() {
           <div className={`panel-section budget-section ${sidebarCollapsed.budget ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('budget')}>
               <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.budget ? 'collapsed' : ''}`}>{sidebarCollapsed.budget ? '+' : '−'}</span>
+                <span className={`collapse-icon ${sidebarCollapsed.budget ? 'collapsed' : ''}`}>{sidebarCollapsed.budget ? '▸' : '▾'}</span>
                 Growth Strategy
               </div>
               {sidebarCollapsed.budget ? (
@@ -1388,7 +1388,7 @@ export function Dashboard() {
           <div className={`panel-section ${sidebarCollapsed.contentMix ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('contentMix')}>
               <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.contentMix ? 'collapsed' : ''}`}>{sidebarCollapsed.contentMix ? '+' : '−'}</span>
+                <span className={`collapse-icon ${sidebarCollapsed.contentMix ? 'collapsed' : ''}`}>{sidebarCollapsed.contentMix ? '▸' : '▾'}</span>
                 Content Mix
               </div>
               {sidebarCollapsed.contentMix ? (
@@ -1440,7 +1440,7 @@ export function Dashboard() {
           <div className={`panel-section ${sidebarCollapsed.advanced ? 'is-collapsed' : ''}`}>
             <div className="section-header clickable" onClick={() => toggleSidebarSection('advanced')}>
               <div className="section-title-group">
-                <span className={`collapse-icon ${sidebarCollapsed.advanced ? 'collapsed' : ''}`}>{sidebarCollapsed.advanced ? '+' : '−'}</span>
+                <span className={`collapse-icon ${sidebarCollapsed.advanced ? 'collapsed' : ''}`}>{sidebarCollapsed.advanced ? '▸' : '▾'}</span>
                 Advanced
               </div>
               {!sidebarCollapsed.advanced && (
@@ -1957,8 +1957,8 @@ export function Dashboard() {
                     <div style={{fontSize:'0.8rem', color:'var(--text-secondary)'}}>
                       <span style={{fontWeight:700, color:'var(--primary)'}}>{totalPaidPct.toFixed(0)}%</span> Paid
                     </div>
-                    <button className="ai-button critique-trigger-btn" onClick={()=> setAcqExpanded(v=>!v)} style={{marginLeft:'8px'}}>
-                      {acqExpanded ? 'Collapse' : 'Expand'}
+                    <button className="chart-mode-btn" onClick={()=> setAcqExpanded(v=>!v)} style={{marginLeft:'8px'}}>
+                      {acqExpanded ? '▾ Minimize' : '▸ Expand'}
                     </button>
                   </div>
                 </div>
