@@ -58,6 +58,7 @@ function App() {
               <ul>
                 <li>Impressions/week = (Paid Funnel Budget ÷ CPM) × 1000, allocated by Paid Allocation.</li>
                 <li>Follows = impressions × view‑through rate (vtr) × engagement rate (er) × follow conversion (fcr), modestly scaled by content suitability.</li>
+                <li>Paid conversion rates assume awareness‑optimized campaigns with indirect follow conversion. Direct follower acquisition campaigns typically achieve $3–5 CPF but may yield lower‑quality followers. Our model prioritizes organic growth supplemented by paid reach.</li>
               </ul>
               <h3>Budget (CPF‑based)</h3>
               <ul>

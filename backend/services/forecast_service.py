@@ -55,13 +55,13 @@ PRESETS = {
     "Ambitious":    {"campaign_lift": 0.35, "sensitivity": 0.65, "acq_scalar": 1.5},
 }
 
-# Paid funnel default rates (industry-informed, adjustable)
+# Paid funnel default rates (Care Bears actual engagement data)
 # vtr: views per impression; er: engagements per view; fcr: follows per engagement
 PAID_FUNNEL_DEFAULT = {
-    "Instagram": {"vtr": 0.35, "er": 0.025, "fcr": 0.015},
-    "TikTok":    {"vtr": 0.40, "er": 0.030, "fcr": 0.012},
-    "YouTube":   {"vtr": 0.30, "er": 0.020, "fcr": 0.010},
-    "Facebook":  {"vtr": 0.28, "er": 0.015, "fcr": 0.008},
+    "Instagram": {"vtr": 0.40, "er": 0.12, "fcr": 0.015},
+    "TikTok":    {"vtr": 0.40, "er": 0.12, "fcr": 0.015},
+    "YouTube":   {"vtr": 0.40, "er": 0.12, "fcr": 0.015},
+    "Facebook":  {"vtr": 0.40, "er": 0.12, "fcr": 0.015},
 }
 
 # Cost-per-follower default ranges (USD)
